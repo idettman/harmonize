@@ -53,22 +53,41 @@ export interface ContainersRecord<Props> extends Map<string, any> {
     get(key: string): ContainerRecord<any, Props>
 }
 
-export interface ContainerRecord<Model, Props> extends Map<string, any> {
-    get(key: 'containers'): ContainersRecord<Props>;
-    get(key: 'model'): Model;
-    get(key: 'view'): ContainerView<Model, Props>;
-    get(key: any): any;
+export interface UndoRedoWrapper<Model> extends Map<string, any> {
+    get(key: 'current'): Model,
+    get(key: 'previousModels'): Model[],
+    get(key: 'nextModels'): Model[]
 }
+
+export interface ContainerRecord<Model, Props> extends Map<string, any> {
+    get(key: 'containers'): ContainersRecord<Props>,
+    get(key: 'model'): Model,
+    get(key: 'wrappedModel'): UndoRedoWrapper<Model>,
+    get(key: 'view'): ContainerView<Model, Props>,
+    get(key: any): any,
+}
+
+
+// function UndoRedoWrapper<Model>(model: Model) {
+//     const UndoRedoRecord = Record({
+//         current: model,
+//         previousModels: [],
+//         nextModels: []
+//     });
+//     return new UndoRedoRecord() as UndoRedoWrapper<Model>;
+// }
 
 export function Container<Model, Containers, Props> (
     params: {
         containers?: { [key: string]: Container<any, any> },
         model: Model,
         update?: ExternalUpdater<any, Model>[],
+        undo?: xs<any>,
+        redo?: xs<any>
         view: ContainerView<Model, Props>
     }
 ): Container<Model, Props> {
-    const {model, update, view} = params;
+    const {model, update, view, undo, redo} = params;
 
     // get the containers objects as a list of containers tuples
     const containerNames = /*if*/ params.containers ? (
@@ -86,10 +105,19 @@ export function Container<Model, Containers, Props> (
         {} as any
     );
     
-    const ContainersRecord = Record(emptyContainers) as new () => ContainersRecord<any>;
+    const ContainersRecord = Record(
+        emptyContainers
+    ) as new () => ContainersRecord<any>;
+
+    const UndoRedoWrapper = Record({
+        current: model,
+        previousModels: [],
+        nextModels: []
+    }) as new () => UndoRedoWrapper<Model>;
 
     const ContainerRecord = Record({
-        model,
+        wrappedModel: new UndoRedoWrapper(),
+        //model,
         view,
         containers: new ContainersRecord()
     }) as new () => ContainerRecord<Model, any>;
@@ -110,7 +138,10 @@ export function Container<Model, Containers, Props> (
         const updater$s = from$.map(value => ((model: Model) => by(model, value)));
         return updater$s.map(updater => (
             (model: ContainerRecord<Model, Props>) => (
-                model.update('model', updater) as ContainerRecord<Model, Props>
+                model.updateIn(
+                    ['wrappedModel', 'current'],
+                    updater
+                ) as ContainerRecord<Model, Props>
             ))
         );
     });
@@ -118,36 +149,78 @@ export function Container<Model, Containers, Props> (
     const internalUpdaters$ = xs.never();
     const internalUpdates$ = internalUpdaters$.map(
         eventUpdater => (model: ContainerRecord<Model, Props>) => (
-            model.update(eventUpdater) as ContainerRecord<Model, Props>
+            model.updateIn(['wrappedModel', 'current'], eventUpdater) as ContainerRecord<Model, Props>
         )
-    )
+    );
 
     const containerModel$ = xs.merge(
-        ...externalUpdates$,
-        ...container$s,
-        internalUpdates$
+        ...externalUpdates$ as any,
+        ...container$s as any,
+        internalUpdates$ as any,
+        undo.mapTo('UNDO') as any,
+        redo.mapTo('REDO') as any
     ).fold(
-        (containerModel, update) => update(containerModel),
+        (containerModel, u) => {
+            const update = u as any;
+            console.log('containerModel', containerModel);
+            switch(update) {
+                case 'UNDO':
+                    const previousModels = containerModel.getIn(['wrappedModel', 'previousModels']);
+                    return /*if*/ previousModels.length === 0 ? (containerModel) : (
+                        containerModel.updateIn(
+                            ['wrappedModel', 'nextModels'],
+                            nextModels => [...nextModels, containerModel.getIn(['wrappedModel', 'current'])]
+                        ).setIn(
+                            ['wrappedModel', 'current'],
+                            previousModels[previousModels.length - 1]
+                        ).updateIn(
+                            ['wrappedModel', 'previousModels'],
+                            previousModels => [...previousModels].slice(0, previousModels.length - 1)
+                        )
+                    );
+                case 'REDO': const nextModels = containerModel.getIn(['wrappedModel', 'nextModels']);
+                    return /*if*/ nextModels.length === 0 ? (containerModel) : (
+                        containerModel.updateIn(
+                            ['wrappedModel', 'previousModels'],
+                            previousModels => [...previousModels, containerModel.getIn(['wrappedModel', 'current'])]
+                        ).setIn(
+                            ['wrappedModel', 'current'],
+                            nextModels[nextModels.length - 1]
+                        ).updateIn(
+                            ['wrappedModel', 'nextModels'],
+                            nextModels => [...nextModels].slice(0, nextModels.length - 1)
+                        )
+                    );
+                default: return containerModel
+                .updateIn(
+                    ['wrappedModel', 'previousModels'],
+                    previousModels => [...previousModels, containerModel.getIn(['wrappedModel', 'current'])]
+                ).setIn(
+                    ['wrappedModel', 'nextModels'], []
+                )
+                .update(update);
+            }
+        },
         new ContainerRecord()
     );
 
     const sendNext = internalUpdaters$.shamefullySendNext.bind(internalUpdaters$);
 
     function resolve(container: ContainerRecord<any, any>, chain: string[]): any {
-        const model = container.get('model');
+        const model = container.get('wrappedModel');
         const lookupChain = chain.reduce(
             (chain, containerKey) => [...chain, 'containers', containerKey],
             [] as string[]
         );
+        console.log('lookup chain', [...lookupChain, 'wrappedModel', 'current']);
         const update = (updater: InternalUpdater<any, Event>) => (
-            (event: Event) => (
-                sendNext(
-                    (mainModel: any) => mainModel.setIn(
-                        [...lookupChain, 'model'],
-                        updater(mainModel.getIn([...lookupChain, 'model']), event)
+            (event: Event) => {
+                return (
+                    sendNext(
+                        (mainModel: any) => updater(mainModel, event)
                     )
-                )
-            )
+                );
+            }
         );
         const nestedContainers = container.get('containers');
         const nestedContainerList = nestedContainers.keySeq().map(
@@ -163,7 +236,7 @@ export function Container<Model, Containers, Props> (
                                 case 'containers': return {
                                     keySeq: () => [] as any[]
                                 };
-                                case 'model': null;
+                                case 'wrappedModel': null;
                             }
                         }
                     }) as any
@@ -208,7 +281,7 @@ export function Container<Model, Containers, Props> (
         );
 
 
-        return { model, update, containers };
+        return { model: model.getIn(['current']), update, containers };
     }
 
     const view$ = containerModel$.map(
@@ -323,4 +396,19 @@ export function Container<Model, Containers, Props> (
 //     component.selector = selector;
 //     component.id = options.id;
 //     return component;
-// }
+// }hjuhjjj
+
+
+/*
+
+const Todo = Component<>(
+    (update) => h('div', )
+);
+
+const container = Container({
+    view: ({model, update}) => h(
+        Todo(model, update)
+    )
+})
+
+ */
