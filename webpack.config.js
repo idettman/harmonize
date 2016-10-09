@@ -1,5 +1,5 @@
 module.exports = {
-    entry: "./src/harmony.ts",
+    entry: "./src/example.ts",
     output: {
         filename: "./harmony.js",
     },

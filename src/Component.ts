@@ -56,7 +56,8 @@ export interface ContainersRecord<Props> extends Map<string, any> {
 export interface UndoRedoWrapper<Model> extends Map<string, any> {
     get(key: 'current'): Model,
     get(key: 'previousModels'): Model[],
-    get(key: 'nextModels'): Model[]
+    get(key: 'nextModels'): Model[],
+    get(key: any): any
 }
 
 export interface ContainerRecord<Model, Props> extends Map<string, any> {
@@ -149,7 +150,7 @@ export function Container<Model, Containers, Props> (
     const internalUpdaters$ = xs.never();
     const internalUpdates$ = internalUpdaters$.map(
         eventUpdater => (model: ContainerRecord<Model, Props>) => (
-            model.updateIn(['wrappedModel', 'current'], eventUpdater) as ContainerRecord<Model, Props>
+            model.update(eventUpdater) as ContainerRecord<Model, Props>
         )
     );
 
@@ -178,7 +179,8 @@ export function Container<Model, Containers, Props> (
                             previousModels => [...previousModels].slice(0, previousModels.length - 1)
                         )
                     );
-                case 'REDO': const nextModels = containerModel.getIn(['wrappedModel', 'nextModels']);
+                case 'REDO':
+                    const nextModels = containerModel.getIn(['wrappedModel', 'nextModels']);
                     return /*if*/ nextModels.length === 0 ? (containerModel) : (
                         containerModel.updateIn(
                             ['wrappedModel', 'previousModels'],
@@ -191,14 +193,12 @@ export function Container<Model, Containers, Props> (
                             nextModels => [...nextModels].slice(0, nextModels.length - 1)
                         )
                     );
-                default: return containerModel
-                .updateIn(
+                default: return containerModel.updateIn(
                     ['wrappedModel', 'previousModels'],
                     previousModels => [...previousModels, containerModel.getIn(['wrappedModel', 'current'])]
                 ).setIn(
                     ['wrappedModel', 'nextModels'], []
-                )
-                .update(update);
+                ).update(update);
             }
         },
         new ContainerRecord()
@@ -208,16 +208,31 @@ export function Container<Model, Containers, Props> (
 
     function resolve(container: ContainerRecord<any, any>, chain: string[]): any {
         const model = container.get('wrappedModel');
+        console.log('wrappedModel', model);
         const lookupChain = chain.reduce(
             (chain, containerKey) => [...chain, 'containers', containerKey],
             [] as string[]
         );
+
         console.log('lookup chain', [...lookupChain, 'wrappedModel', 'current']);
         const update = (updater: InternalUpdater<any, Event>) => (
             (event: Event) => {
                 return (
                     sendNext(
-                        (mainModel: any) => updater(mainModel, event)
+                        (mainModel: ContainerRecord<any, any>) => {
+                            console.log('mainModel', mainModel);
+                            mainModel.updateIn(
+                                [...lookupChain, 'wrappedModel', 'previousModels'],
+                                previousModels => [...previousModels, mainModel.getIn(['wrappedModel', 'current'])]
+                            ).setIn(
+                                [...lookupChain, 'wrappedModel', 'nextModels'], []
+                            ).update(m => updater(m, event));
+                            return mainModel.updateIn(
+                                [...lookupChain, 'wrappedModel', 'current'],
+                                m => updater(m, event)
+                            );
+                            //return updater(mainModel, event);
+                        }
                     )
                 );
             }
@@ -236,7 +251,10 @@ export function Container<Model, Containers, Props> (
                                 case 'containers': return {
                                     keySeq: () => [] as any[]
                                 };
-                                case 'wrappedModel': null;
+                                case 'wrappedModel': return {
+                                    getIn: () => null
+                                };
+                                default: return null;
                             }
                         }
                     }) as any
@@ -280,7 +298,7 @@ export function Container<Model, Containers, Props> (
             {} as {[key: string]: any}
         );
 
-
+        console.log('the thing', model);
         return { model: model.getIn(['current']), update, containers };
     }
 
@@ -292,7 +310,7 @@ export function Container<Model, Containers, Props> (
     // nested containers  should have wrappers that feed into the view function
     return {
         containerModel$,
-        model$: containerModel$.map(model => model.get('model')),
+        model$: containerModel$.map(model => model.getIn(['wrappedModel'])),
         DOM: view$,
         view
     };
