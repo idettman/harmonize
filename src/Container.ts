@@ -54,8 +54,6 @@ export default function Container<Model>(
     options: {
         initialState: Model,
         nestedContainers?: {[containerKey: string]: ContainerModel<any>},
-        undo?: xs<any>,
-        redo?: xs<any>
         view: ContainerView<Model>
     }
 ) {
@@ -63,11 +61,6 @@ export default function Container<Model>(
 
     const updates$ = xs.never() as xs<(model: Model) => Model>;
     const sendUpdate = updates$.shamefullySendNext.bind(updates$);
-
-    const undoRedos$ = xs.merge(
-        (undo || xs.never()).mapTo('UNDO'),
-        (redo || xs.never()).mapTo('REDO')
-    );
 
     const UndoRedoRecord = Record({
         current: initialState,
@@ -131,35 +124,3 @@ export default function Container<Model>(
 
     return state$.map(state => view({model: state.get('current'), update}));
 }
-
-/*
-
-const nestedContainer = Container({
-    initialState: new Record({someKey: 'value'}),
-    view: ({model: {someKey}, update}) => h('div', {
-        on: {click: update({by: model => model + 1})}
-    }, [])
-});
-
-const container = Container({
-    initialState: new Record({
-        count: 0,
-        word: 'world!'
-    }),
-    update: [{
-        from$: ,
-        by: 
-    }],
-    view: ({
-        model: {count, word},
-        update,
-        containers: {nestedContainer}
-    }) => h('div', {
-        on: {click: update({
-            from: event => event.target.value,
-            by: (model, value) => model.set('a', value)
-        })}
-    })
-});
-
-*/

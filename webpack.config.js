@@ -1,7 +1,8 @@
+var path = require('path');
 module.exports = {
-    entry: "./src/example.ts",
+    entry: "./src/willipass.ts",
     output: {
-        filename: "./harmony.js",
+        filename: "./willipass.js",
     },
 
     // Enable sourcemaps for debugging webpack's output.
@@ -15,12 +16,16 @@ module.exports = {
     module: {
         loaders: [
             // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
-            { test: /\.ts?$/, loader: "ts-loader" }
+            { test: /\.ts?$/, loader: "ts-loader" },
+            { test: /\.scss$/, loaders: ["style", "css", "sass"] }
         ],
 
         preLoaders: [
             // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
             { test: /\.js$/, loader: "source-map-loader" }
         ]
+    },
+    sassLoader: {
+        includePaths: [path.resolve(__dirname, "./src")]
     }
 };
