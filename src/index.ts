@@ -1,6 +1,6 @@
 import {Observable} from 'rxjs';
 import xs from 'xstream';
-import {VNode} from './Container';
+import {Container, VNode} from './Container';
 declare function require(path: string) : any;
 
 const snabbdom = require('snabbdom');
@@ -14,13 +14,11 @@ const patch = snabbdom.init([
 ]);
 
 export default function harmonize(
-    container: xs<VNode>,
+    container: Container<any>,
     selector: string
 ) {
-    console.log('container', container);
-    (window as any).container = container;
     let node = document.querySelector(selector) as VNode | Element;
-    container.addListener({
+    container.view$.addListener({
         next: (newNode) => {
             console.log('newNode', newNode);
             patch(node, newNode);

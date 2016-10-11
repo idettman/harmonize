@@ -107,14 +107,15 @@ export default function Container<Model> (
                 nextStates: [],
                 previousStates: []
             }),
-            nestedContainers: NestedContainers(
-                Object.keys(container.nestedContainers || {}
-                ).map(key => ({
+            nestedContainers: NestedContainers(Object
+                .keys(container.nestedContainers || {})
+                .map(key => ({
                     key,
                     model: resolveModel(
                         container.nestedContainers[key]
                     )
-                })).reduce((nestedObj, nestedContainerModel) => {
+                }))
+                .reduce((nestedObj, nestedContainerModel) => {
                     nestedObj[nestedContainerModel.key] = nestedContainerModel.model;
                     return nestedObj;
                 }, {} as {[key: string]: ContainerModel<any>})
@@ -125,87 +126,79 @@ export default function Container<Model> (
 
     const initialContainerModel = resolveModel(container);
 
-    console.log('initialContainerModel', initialContainerModel);
-
     const componentState$ = updates$.fold(
         (state, update) => update(state),
         initialContainerModel
     );
 
-    function resolve<M>(container: ContainerModel<M>, chain: string[]) {
+    function resolveView(props: any, containerModel: ContainerModel<any>, currentKey?: string) {
+        
+        const model = containerModel.get('undoRedoModel').get('current');
 
-        const UndoRedo = Map({
-            current: initialState,
-            nextStates: [],
-            previousStates: []
-        }) as UndoRedo<Model>;
-
-        const nestedContainerList = Object.keys(nestedContainers).map(nestedKey => ({
-            key: nestedKey,
-            initialState: nestedContainers[nestedKey].initialState,
-            view: nestedContainers[nestedKey].view,
-            model: nestedContainers[nestedKey].
-        }));
-
-        const NestedContainersRecord = Record(nestedContainerList.reduce(
-            (nestedContainerObj, nestedContainer) => {
-                nestedContainerObj[nestedContainer.key] = nestedContainer.
-                return nestedContainerObj;
-            },
-            {} as any
-        )) as new () => NestedContainers;
-
-        const ContainerModelRecord = Record({
-            undoRedoModel: UndoRedo,
-            nestedContainers: new NestedContainersRecord(),
-
-        });
-
-
-        const update = (updater: InternalUpdater<Model, any>) => {
-            const {map, by, byInternal} = updater;
-            if (by && byInternal) throw ('cannot update both internal model and regular model');
-            if (by) {
-                return (event: any) => (
-                    sendUpdate(
-                        (containerModel: ContainerModel<Model>) => (
-                            containerModel.update(
-                                'previousStates',
-                                previousStates => [...previousStates, containerModel.get('current')]
-                            ).set(
-                                'nextStates', []
-                            ).update(
-                                'current', model => by(model, map(event))
-                            )
-                        )
+        const containers = (containerModel
+            .get('nestedContainers')
+            .keySeq()
+            .map(key => ({
+                key,
+                container: containerModel.get('nestedContainers').get(key)
+            }))
+            .map(({key, container}) => {
+                console.log('key', key);
+                return {
+                    key,
+                    resolvedView: (props?: any) => (
+                        resolveView(props, container, key)
                     )
-                );
-            }
-            return (event: any) => (
-                sendUpdate(
-                    (containerModel: ContainerModel<Model>) => (
-                        containerModel.update(m => byInternal(m, map(event)))
-                    )
-                )
-            );
-        };
+                }
+            })
+            .reduce(
+                (obj, {key, resolvedView}) => {
+                    obj[key] = resolvedView;
+                    return obj;
+                },
+                {} as {[key: string]: (props?: any) => VNode}
+            )
+        );
 
+        const update = null;
+
+        // const update = (updater: InternalUpdater<Model, any>) => {
+        //     const {map, by, byInternal} = updater;
+        //     if (by && byInternal) throw ('cannot update both internal model and regular model');
+        //     if (by) {
+        //         return (event: any) => (
+        //             sendUpdate(
+        //                 (containerModel: ContainerModel<Model>) => (
+        //                     containerModel.update(
+        //                         'previousStates',
+        //                         previousStates => [...previousStates, containerModel.get('current')]
+        //                     ).set(
+        //                         'nextStates', []
+        //                     ).update(
+        //                         'current', model => by(model, map(event))
+        //                     )
+        //                 )
+        //             )
+        //         );
+        //     }
+        //     return (event: any) => (
+        //         sendUpdate(
+        //             (containerModel: ContainerModel<Model>) => (
+        //                 containerModel.update(m => byInternal(m, map(event)))
+        //             )
+        //         )
+        //     );
+        // };
+
+        const view = containerModel.get('view');
+        return view({model, containers, update, props});
     }
 
-    function resolveView<M>(
-        containerModel: ContainerModel<M>,
-        chain: string[],
-    ): ContainerViewOptions<M> {
-        const lookupChain = chain.map(nestedKey => (['']));
-        return {
-            model: containerModel.get('undoRedoModel').get('current'),
-            
-        };
-    }
+    const resolvedView = (containerModel: ContainerModel<any>) => (
+        resolveView(null, containerModel, 'root')
+    );
 
-    const resolvedView = resolveView()
-
-    const view$ = componentState$.map(state => view(state));
+    const view$ = componentState$.map(state => resolvedView(state));
 
     return {
         componentState$,
