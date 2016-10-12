@@ -62,6 +62,8 @@ const container = Container({
 harmonize(container, '#will-i-pass');
 ```
 
+This results in: ![example picture](https://github.com/ricokahler/harmony/blob/master/Capture.PNG).
+
 This library is only in it's conceptual stages but we plan to make this into a full-fledge framework that will be more compelling than react/redux combo.
 
 `Watch` this repository for updates.
