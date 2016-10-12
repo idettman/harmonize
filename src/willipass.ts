@@ -13,46 +13,56 @@ const doubleNested = Container({
 });
 
 const nestedContainer = Container({
-    nestedContainers: {doubleNested},
     initialState: 0,
     view: ({
-        containers: {doubleNested},
         modules: {undo, redo},
         update,
-        model: count,
-    }) => h('div', [
-        h('h1', ['count: ' + count]),
-        h('button', {
-            on: {click: update({by: (model) => model + 1})}
-        }, ['+1']),
-        h('button', {
-            on: {click: update(undo)}
-        }, ['undo']),
-        doubleNested()
-    ])
+        model: count
+    }) => {
+        const add = (x: number) => h('button', {
+            on: {click: update({by: (count) => count + x})}
+        }, [x]);
+
+        return h('div', [
+            h('h1', [`count: ${count}`]),
+            h('div', [add(-1), add(-2), add(2), add(1)]),
+            h('div', [
+                h('button', {on: {click: update(undo)}}, ['Undo']),
+                h('button', {on: {click: update(redo)}}, ['Redo'])
+            ])
+        ]);
+    }
 });
 
 const container = Container({
     nestedContainers: {nestedContainer},
-    initialState: 'world',
-    view: ({model: word, update, containers: {nestedContainer}, modules: {undo,redo}}) => {
-        return h('div.test', [
+    initialState: 'World',
+    view: ({
+        containers: {nestedContainer},
+        modules: {undo, redo},
+        model: name,
+        update
+    }) => h('div', [
+        h('div', [
+            h('label', ['your name:']),
             h('input', {
                 on: {input: update({
-                    map: event => (event.target as HTMLInputElement).value,
-                    by: (word, value) => value
+                    map: (event) => (event.target as HTMLInputElement).value,
+                    by: (name, targetValue) => targetValue
                 })},
-                props: {value: word}
-            }),
-            h('h1', ['word: ' + word]),
-            h('div', [
-                h('button', {on: {click: update(undo)}}, ['undo']),
-                h('button', {on: {click: update(redo)}}, ['redo'])
-                
-            ]),
-            nestedContainer('f')
-        ]);
-    }
+                props: {value: name}
+            })
+        ]),
+        h('h1', [`Hello, ${name}!`]),
+        h('div', [
+            h('button', {on: {click: update(undo)}}, ['Undo']),
+            h('button', {on: {click: update(redo)}}, ['Redo']),
+        ]),
+        h('div', [
+            h('p', ['the nested container:']),
+            nestedContainer()
+        ])
+    ])
 });
 
 harmonize(container, '#will-i-pass');
