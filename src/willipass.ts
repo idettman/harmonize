@@ -15,9 +15,19 @@ const doubleNested = Container({
 const nestedContainer = Container({
     nestedContainers: {doubleNested},
     initialState: 0,
-    view: ({model: count, update, containers: {doubleNested}}) => h('div', [
+    view: ({
+        containers: {doubleNested},
+        modules: {undo, redo},
+        update,
+        model: count,
+    }) => h('div', [
         h('h1', ['count: ' + count]),
-        h('button', ['+1']),
+        h('button', {
+            on: {click: update({by: (model) => model + 1})}
+        }, ['+1']),
+        h('button', {
+            on: {click: update(undo)}
+        }, ['undo']),
         doubleNested()
     ])
 });
@@ -25,13 +35,21 @@ const nestedContainer = Container({
 const container = Container({
     nestedContainers: {nestedContainer},
     initialState: 'world',
-    view: ({model: word, update, containers: {nestedContainer}}) => {
-        console.log('nestedContainer', (nestedContainer || 'nothing').toString());
+    view: ({model: word, update, containers: {nestedContainer}, modules: {undo,redo}}) => {
         return h('div.test', [
             h('input', {
+                on: {input: update({
+                    map: event => (event.target as HTMLInputElement).value,
+                    by: (word, value) => value
+                })},
                 props: {value: word}
             }),
             h('h1', ['word: ' + word]),
+            h('div', [
+                h('button', {on: {click: update(undo)}}, ['undo']),
+                h('button', {on: {click: update(redo)}}, ['redo'])
+                
+            ]),
             nestedContainer('f')
         ]);
     }

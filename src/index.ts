@@ -20,7 +20,6 @@ export default function harmonize(
     let node = document.querySelector(selector) as VNode | Element;
     container.view$.addListener({
         next: (newNode) => {
-            console.log('newNode', newNode);
             patch(node, newNode);
             node = newNode;
         },

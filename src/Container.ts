@@ -29,7 +29,8 @@ export interface ContainerViewOptions<Model> {
     model: Model,
     update: (updater: InternalUpdater<Model, any>) => void,
     containers?: {[key: string]: (props?: any) => VNode}
-    props?: any
+    props?: any,
+    modules?: any
 }
 
 export interface ContainerView<Model> {
@@ -131,8 +132,7 @@ export default function Container<Model> (
         initialContainerModel
     );
 
-    function resolveView(props: any, containerModel: ContainerModel<any>, currentKey?: string) {
-        
+    function resolveView(props: any, containerModel: ContainerModel<any>, chain: string[] = []) {
         const model = containerModel.get('undoRedoModel').get('current');
 
         const containers = (containerModel
@@ -142,15 +142,12 @@ export default function Container<Model> (
                 key,
                 container: containerModel.get('nestedContainers').get(key)
             }))
-            .map(({key, container}) => {
-                console.log('key', key);
-                return {
-                    key,
-                    resolvedView: (props?: any) => (
-                        resolveView(props, container, key)
-                    )
-                }
-            })
+            .map(({key, container}) => ({
+                key,
+                resolvedView: (props?: any) => (
+                    resolveView(props, container, [...chain, key])
+                )
+            }))
             .reduce(
                 (obj, {key, resolvedView}) => {
                     obj[key] = resolvedView;
@@ -160,42 +157,116 @@ export default function Container<Model> (
             )
         );
 
-        const update = null;
+        const lookupChain = chain.reduce(
+            (lookupChain, componentKey) => [...lookupChain, 'nestedContainers', componentKey],
+            [] as string[]
+        );
 
-        // const update = (updater: InternalUpdater<Model, any>) => {
-        //     const {map, by, byInternal} = updater;
-        //     if (by && byInternal) throw ('cannot update both internal model and regular model');
-        //     if (by) {
-        //         return (event: any) => (
-        //             sendUpdate(
-        //                 (containerModel: ContainerModel<Model>) => (
-        //                     containerModel.update(
-        //                         'previousStates',
-        //                         previousStates => [...previousStates, containerModel.get('current')]
-        //                     ).set(
-        //                         'nextStates', []
-        //                     ).update(
-        //                         'current', model => by(model, map(event))
-        //                     )
-        //                 )
-        //             )
-        //         );
-        //     }
-        //     return (event: any) => (
-        //         sendUpdate(
-        //             (containerModel: ContainerModel<Model>) => (
-        //                 containerModel.update(m => byInternal(m, map(event)))
-        //             )
-        //         )
-        //     );
-        // };
+        const update = (updater: InternalUpdater<Model, any>) => {
+            const {by, byInternal} = updater;
+            const map = updater.map || ((event) => event);
+            if (by && byInternal) throw ('cannot update both internal model and regular model');
+            if (by) {
+                return (event: any) => (
+                    sendUpdate(
+                        (containerModel: ContainerModel<Model>) => (
+                            (containerModel
+                                .updateIn(
+                                    [...lookupChain, 'undoRedoModel', 'previousStates'],
+                                    previousStates => [
+                                        ...previousStates,
+                                        containerModel.getIn([...lookupChain, 'undoRedoModel', 'current'])
+                                    ]
+                                )
+                                .setIn(
+                                    [...lookupChain, 'undoRedoModel', 'nextStates'],
+                                    []
+                                )
+                                .updateIn(
+                                    [...lookupChain, 'undoRedoModel', 'current'],
+                                    model => by(model, map(event))
+                                )
+                            )
+                        )
+                    )
+                );
+            }
+            return (event: any) => (
+                sendUpdate(
+                    (containerModel: ContainerModel<Model>) => (
+                        containerModel.updateIn(
+                            [...lookupChain],
+                            m => byInternal(m, map(event))
+                        )
+                    )
+                )
+            );
+        };
+
+        const undo: InternalUpdater<any, any> = {
+            map: event => event,
+            byInternal: (model) => {
+                const previousStates = model.getIn(['undoRedoModel', 'previousStates']);
+                if (previousStates.length === 0) return model;
+                return (model
+                    .updateIn(
+                        ['undoRedoModel', 'nextStates'],
+                        nextStates => [
+                            ...nextStates,
+                            model.getIn(['undoRedoModel','current'])
+                        ]
+                    )
+                    .setIn(
+                        ['undoRedoModel', 'current'],
+                        previousStates[previousStates.length - 1]
+                    )
+                    .updateIn(
+                        ['undoRedoModel', 'previousStates'],
+                        previousStates => previousStates.slice(
+                            0,
+                            previousStates.length - 1
+                        )
+                    )
+                )
+            }
+        }
+
+        const redo: InternalUpdater<any, any> = {
+            map: event => event,
+            byInternal: (model) => {
+                const nextStates = model.getIn(['undoRedoModel', 'nextStates']);
+                if (nextStates.length === 0) return model;
+                return (model
+                    .updateIn(
+                        ['undoRedoModel', 'previousStates'],
+                        previousStates => [
+                            ...previousStates,
+                            model.getIn(['undoRedoModel','current'])
+                        ]
+                    )
+                    .setIn(
+                        ['undoRedoModel', 'current'],
+                        nextStates[nextStates.length - 1]
+                    )
+                    .updateIn(
+                        ['undoRedoModel', 'nextStates'],
+                        nextStates => nextStates.slice(
+                            0,
+                            nextStates.length - 1
+                        )
+                    )
+                )
+            }
+        }
+
+        const modules = { undo, redo };
 
         const view = containerModel.get('view');
-        return view({model, containers, update, props});
+        return view({model, containers, update, props, modules});
     }
 
     const resolvedView = (containerModel: ContainerModel<any>) => (
-        resolveView(null, containerModel, 'root')
+        resolveView(null, containerModel)
     );
 
     const view$ = componentState$.map(state => resolvedView(state));
@@ -211,78 +282,3 @@ export default function Container<Model> (
         nestedContainers
     };
 }
-
-/*
-
-const nestedContainer = Container({
-    initialState: new Record({someKey: 'value'}),
-    view: ({model: {someKey}, update}) => h('div', {
-        on: {click: update({by: model => model + 1})}
-    }, [])
-});
-
-const container = Container({
-    initialState: new Record({
-        count: 0,
-        word: 'world!'
-    }),
-    update: [{
-        from$: ,
-        by: 
-    }],
-    view: ({
-        model: {count, word},
-        update,
-        containers: {nestedContainer}
-    }) => h('div', {
-        on: {click: update({
-            from: event => event.target.value,
-            by: (model, value) => model.set('a', value)
-        })}
-    })
-});
-
-
-{
-            console.log('updateOrUndoRedo', updateOrUndoRedo);
-            switch(updateOrUndoRedo) {
-                case 'UNDO':
-                    const previousStates = state.get('previousStates');
-                    return previousStates.length === 0 ? (state) : (
-                        state.update(
-                            'nextStates',
-                            nextStates => [...nextStates, state.get('current')]
-                        ).set(
-                            'current',
-                            previousStates[previousStates.length - 1]
-                        ).update(
-                            'previousStates',
-                            previousStates => [...previousStates].slice(0, previousStates.length - 1)
-                        )
-                    )
-                case 'REDO':
-                    const nextStates = state.get('nextStates');
-                    return nextStates.length === 0 ? (state) : (
-                        state.update(
-                            'previousStates',
-                            previousStates => [...previousStates, state.get('current')]
-                        ).set(
-                            'current',
-                            nextStates[nextStates.length - 1]
-                        ).update(
-                            'nextStates',
-                            nextStates => [...nextStates].slice(0, nextStates.length - 1)
-                        )
-                    );
-                default: return state.update(
-                    'previousStates',
-                    previousStates => [...previousStates, state.get('current')]
-                ).set(
-                    'nextStates', []
-                ).update(
-                    'current', s => updateOrUndoRedo(s)
-                );
-            }
-        }
-
-*/
