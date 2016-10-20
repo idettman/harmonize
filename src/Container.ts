@@ -99,11 +99,13 @@ export interface Container<Model> {
 export default function Container<Model> (
     container: {
         initialState: Model,
+        update?: ExternalUpdater<any, any>[],
         nestedContainers?: {[containerKey: string]: Container<any>},
         view: ContainerView<Model>
     }
 ): Container<Model> {
     const {initialState, nestedContainers, view} = container;
+    const update = container.update || [];
 
     const nestedContainerList = (Object
         .keys(nestedContainers || {})
@@ -123,7 +125,39 @@ export default function Container<Model> (
         ))
     );
 
-    const updates$ = xs.never() as xs<(containerModel: ContainerModel<Model>) => ContainerModel<Model>>;
+    const internalUpdates$: (
+        xs<(containerModel: ContainerModel<Model>) => ContainerModel<Model>>
+    ) = xs.never();
+
+    const externalUpdates$ = update.map(
+        ({from: externalStream$, by: update}) => (
+            // map the external stream to a function
+            // that updates this container Model
+            externalStream$.map(
+                streamValue => (
+                    (containerModel: ContainerModel<Model>) => (
+                        (containerModel
+                            .updateIn(
+                                ['undoRedoModel', 'previousStates'],
+                                previousStates => [
+                                    ...previousStates,
+                                    containerModel.getIn(['undoRedoModel', 'current'])
+                                ]
+                            )
+                            .setIn(
+                                ['undoRedoModel', 'nextStates'],
+                                []
+                            )
+                            .updateIn(
+                                ['undoRedoModel', 'current'],
+                                model => update(model, streamValue)
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    );
 
     /**
      * sendUpdate is a function that takes in an Updater and returns void
@@ -131,7 +165,7 @@ export default function Container<Model> (
      * returns a stream
      */
     const sendUpdate: (updater: Updater<ContainerModel<Model>>) => void = (
-        updates$.shamefullySendNext.bind(updates$)
+        internalUpdates$.shamefullySendNext.bind(internalUpdates$)
     );
 
     function resolveModel<M>(container: Container<M>): ContainerModel<M> {
@@ -164,7 +198,7 @@ export default function Container<Model> (
         sendUpdate
     });
 
-    const componentState$ = xs.merge(...components$, updates$).fold(
+    const componentState$ = xs.merge(...components$, ...externalUpdates$, internalUpdates$).fold(
         (state, update) => update(state),
         initialContainerModel
     );
@@ -196,10 +230,12 @@ export default function Container<Model> (
         );
 
         const update = (updater: InternalUpdater<Model, any>) => {
-            const {by, byInternal} = updater;
+            const {by: updateModel, byInternal: updateContainerModel} = updater;
             const map = updater.map || ((event) => event);
-            if (by && byInternal) throw ('cannot update both internal model and regular model');
-            if (by) {
+            if (updateModel && updateContainerModel) throw (
+                'cannot update both internal model and regular model'
+            );
+            if (updateModel) {
                 return (event: any) => (
                     nestedSendUpdate(
                         (containerModel: ContainerModel<Model>) => (
@@ -217,7 +253,10 @@ export default function Container<Model> (
                                 )
                                 .updateIn(
                                     ['undoRedoModel', 'current'],
-                                    model => by(model, map(event))
+                                    model => updateModel(
+                                        model,
+                                        /*with*/ map(event)
+                                    )
                                 )
                             )
                         )
@@ -227,7 +266,10 @@ export default function Container<Model> (
             return (event: any) => (
                 nestedSendUpdate(
                     (containerModel: ContainerModel<Model>) => (
-                        containerModel.update(m => byInternal(m, map(event)))
+                        containerModel.update(self => updateContainerModel(
+                            self,
+                            /*with*/ map(event)
+                        ))
                     )
                 )
             );
