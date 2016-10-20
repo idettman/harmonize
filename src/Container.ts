@@ -10,6 +10,11 @@ export interface VNode {
     key: string | number
 }
 
+/**
+ * Updaters are functions that take in a model and return a new model
+ */
+export interface Updater<Model> {(model: Model): Model}
+
 export interface ExternalUpdater<Model, Value> {
     from: xs<Model>,
     by: (model: Model, value?: Value) => Model
@@ -58,13 +63,15 @@ export interface ContainerModel<Model> extends Map<string, any> {
     get(key: 'undoRedoModel'): UndoRedo<Model>,
     get(key: 'nestedContainers'): NestedContainers,
     get(key: 'view'): ContainerView<Model>,
+    get(key: 'sendUpdate'): (updater: Updater<ContainerModel<Model>>) => void
     get(key: any): any,
 }
 
 function ContainerModel<Model> (containerModel: {
     undoRedoModel: UndoRedo<Model>,
     nestedContainers?: NestedContainers,
-    view: ContainerView<Model>
+    view: ContainerView<Model>,
+    sendUpdate: (updater: Updater<ContainerModel<Model>>) => void
 }) {
     return Map(containerModel) as ContainerModel<Model>;
 }
@@ -86,6 +93,7 @@ export interface Container<Model> {
     state$?: MemoryStream<Model>,
     componentState$?: MemoryStream<ContainerModel<Model>>,
     view$?: MemoryStream<VNode>,
+    sendUpdate: (updater: Updater<ContainerModel<Model>>) => void
 }
 
 export default function Container<Model> (
@@ -97,8 +105,34 @@ export default function Container<Model> (
 ): Container<Model> {
     const {initialState, nestedContainers, view} = container;
 
+    const nestedContainerList = (Object
+        .keys(nestedContainers || {})
+        .map(key => ({
+            key,
+            container: nestedContainers[key]
+        }))
+    );
+
+    const components$ = (nestedContainerList
+        .map(({key, container}) => (container.componentState$
+            .map(state => (
+                (model: ContainerModel<Model>) => (
+                    model.setIn(['nestedContainers', key], state) as ContainerModel<Model>
+                )
+            ))
+        ))
+    );
+
     const updates$ = xs.never() as xs<(containerModel: ContainerModel<Model>) => ContainerModel<Model>>;
-    const sendUpdate = updates$.shamefullySendNext.bind(updates$);
+
+    /**
+     * sendUpdate is a function that takes in an Updater and returns void
+     * To send an update, you send a function that modifies the model. This
+     * returns a stream
+     */
+    const sendUpdate: (updater: Updater<ContainerModel<Model>>) => void = (
+        updates$.shamefullySendNext.bind(updates$)
+    );
 
     function resolveModel<M>(container: Container<M>): ContainerModel<M> {
         return ContainerModel({
@@ -111,28 +145,33 @@ export default function Container<Model> (
                 .keys(container.nestedContainers || {})
                 .map(key => ({
                     key,
-                    model: resolveModel(
-                        container.nestedContainers[key]
-                    )
+                    model: resolveModel(container.nestedContainers[key])
                 }))
-                .reduce((nestedObj, nestedContainerModel) => {
-                    nestedObj[nestedContainerModel.key] = nestedContainerModel.model;
+                .reduce((nestedObj, nestedContainer) => {
+                    nestedObj[nestedContainer.key] = nestedContainer.model;
                     return nestedObj;
                 }, {} as {[key: string]: ContainerModel<any>})
             ),
-            view: container.view
+            view: container.view,
+            sendUpdate: container.sendUpdate
         });
     }
 
-    const initialContainerModel = resolveModel(container);
+    const initialContainerModel = resolveModel({
+        initialState,
+        nestedContainers,
+        view,
+        sendUpdate
+    });
 
-    const componentState$ = updates$.fold(
+    const componentState$ = xs.merge(...components$, updates$).fold(
         (state, update) => update(state),
         initialContainerModel
     );
 
     function resolveView(props: any, containerModel: ContainerModel<any>, chain: string[] = []) {
         const model = containerModel.get('undoRedoModel').get('current');
+        const nestedSendUpdate = containerModel.get('sendUpdate');
 
         const containers = (containerModel
             .get('nestedContainers')
@@ -156,33 +195,28 @@ export default function Container<Model> (
             )
         );
 
-        const lookupChain = chain.reduce(
-            (lookupChain, componentKey) => [...lookupChain, 'nestedContainers', componentKey],
-            [] as string[]
-        );
-
         const update = (updater: InternalUpdater<Model, any>) => {
             const {by, byInternal} = updater;
             const map = updater.map || ((event) => event);
             if (by && byInternal) throw ('cannot update both internal model and regular model');
             if (by) {
                 return (event: any) => (
-                    sendUpdate(
+                    nestedSendUpdate(
                         (containerModel: ContainerModel<Model>) => (
                             (containerModel
                                 .updateIn(
-                                    [...lookupChain, 'undoRedoModel', 'previousStates'],
+                                    ['undoRedoModel', 'previousStates'],
                                     previousStates => [
                                         ...previousStates,
-                                        containerModel.getIn([...lookupChain, 'undoRedoModel', 'current'])
+                                        containerModel.getIn(['undoRedoModel', 'current'])
                                     ]
                                 )
                                 .setIn(
-                                    [...lookupChain, 'undoRedoModel', 'nextStates'],
+                                    ['undoRedoModel', 'nextStates'],
                                     []
                                 )
                                 .updateIn(
-                                    [...lookupChain, 'undoRedoModel', 'current'],
+                                    ['undoRedoModel', 'current'],
                                     model => by(model, map(event))
                                 )
                             )
@@ -191,12 +225,9 @@ export default function Container<Model> (
                 );
             }
             return (event: any) => (
-                sendUpdate(
+                nestedSendUpdate(
                     (containerModel: ContainerModel<Model>) => (
-                        containerModel.updateIn(
-                            [...lookupChain],
-                            m => byInternal(m, map(event))
-                        )
+                        containerModel.update(m => byInternal(m, map(event)))
                     )
                 )
             );
@@ -278,6 +309,7 @@ export default function Container<Model> (
         view,
         view$,
         initialState,
-        nestedContainers
+        nestedContainers,
+        sendUpdate
     };
 }
