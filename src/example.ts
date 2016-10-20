@@ -1,11 +1,5 @@
 import Container from './Container';
 import harmonize, {h} from './';
-import fromEvent from 'xstream/extra/fromEvent';
-// import {undo, redo} from './';
-
-declare function require(string: string): any;
-require('normalize-css');
-require('./styles.scss');
 
 const doubleNested = Container({
     initialState: false,
@@ -65,4 +59,4 @@ const container = Container({
     ])
 });
 
-harmonize(container, '#will-i-pass');
+harmonize(container, '#example');

@@ -1,4 +1,3 @@
-import {Observable} from 'rxjs';
 import xs from 'xstream';
 import {Container, VNode} from './Container';
 declare function require(path: string) : any;

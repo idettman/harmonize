@@ -1,8 +1,8 @@
 var path = require('path');
 module.exports = {
-    entry: "./src/willipass.ts",
+    entry: "./src/example.ts",
     output: {
-        filename: "./willipass.js",
+        filename: "./example.js",
     },
 
     // Enable sourcemaps for debugging webpack's output.
@@ -17,7 +17,6 @@ module.exports = {
         loaders: [
             // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
             { test: /\.ts?$/, loader: "ts-loader" },
-            { test: /\.scss$/, loaders: ["style", "css", "sass"] }
         ],
 
         preLoaders: [

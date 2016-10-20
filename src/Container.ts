@@ -1,4 +1,3 @@
-import {Observable, Subject} from 'rxjs';
 import xs, {MemoryStream} from 'xstream';
 import {Record, Map} from 'immutable';
 
