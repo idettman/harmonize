@@ -1,6 +1,4 @@
-import xs from 'xstream';
 import {Container} from './Container';
-export {default as Container} from './Container';
 
 declare function require(path: string) : any;
 const snabbdom = require('snabbdom');
