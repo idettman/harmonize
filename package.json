@@ -17,10 +17,9 @@
     "webpack-dev-server": "^1.15.1"
   },
   "dependencies": {
+    "core-js": "^2.4.1",
     "immutable": "^3.8.1",
-    "promise": "^7.1.1",
     "snabbdom": "^0.5.3",
-    "typescript": "^2.0.3",
     "xstream": "^6.2.0"
   }
 }

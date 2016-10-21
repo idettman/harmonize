@@ -1,14 +1,21 @@
 import Container from './Container';
 import harmonize, {h} from './';
+import xs from 'xstream';
 
 const doubleNested = Container({
     initialState: false,
-    view: ({model: truth, update}) => h('div', ['is: ' + truth])
+    view: ({model: truth, update}) => h('div', [
+        h('button', {
+            on: {click: update({by: truth => !truth})}
+        }, [/*if*/ truth ? 'yes': 'no'])
+    ])
 });
 
 const nestedContainer = Container({
+    nestedContainers: {doubleNested},
     initialState: 0,
     view: ({
+        containers: {doubleNested},
         modules: {undo, redo},
         update,
         model: count
@@ -23,6 +30,10 @@ const nestedContainer = Container({
             h('div', [
                 h('button', {on: {click: update(undo)}}, ['Undo']),
                 h('button', {on: {click: update(redo)}}, ['Redo'])
+            ]),
+            h('div', [
+                h('p', ['the double nested container']),
+                doubleNested()
             ])
         ]);
     }
@@ -30,11 +41,15 @@ const nestedContainer = Container({
 
 const container = Container({
     nestedContainers: {nestedContainer},
-    initialState: 'World',
+    initialState: {name: 'World', elapsedTime: 0},
+    update: [{
+        from: xs.periodic(1000),
+        by: (model, time) => Object.assign({}, model, {elapsedTime: model.elapsedTime + 1})
+    }],
     view: ({
         containers: {nestedContainer},
         modules: {undo, redo},
-        model: name,
+        model: {name, elapsedTime},
         update
     }) => h('div', [
         h('div', [
@@ -42,12 +57,12 @@ const container = Container({
             h('input', {
                 on: {input: update({
                     map: (event) => (event.target as HTMLInputElement).value,
-                    by: (name, targetValue) => targetValue
+                    by: (model, newName) => Object.assign({}, model, {name: newName})
                 })},
                 props: {value: name}
             })
         ]),
-        h('h1', [`Hello, ${name}!`]),
+        h('h1', [`Hello, ${name}! ${elapsedTime}s have past.`]),
         h('div', [
             h('button', {on: {click: update(undo)}}, ['Undo']),
             h('button', {on: {click: update(redo)}}, ['Redo']),
