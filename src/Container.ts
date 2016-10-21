@@ -1,6 +1,6 @@
 import xs, {MemoryStream} from 'xstream';
 import {Record, Map} from 'immutable';
-import {VNode} from './';
+import {VNode} from './harmonize';
 
 /**
  * Updaters are functions that take in a model and return a new model

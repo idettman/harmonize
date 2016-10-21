@@ -1,4 +1,4 @@
-import harmonize, {h, Container} from './';
+import harmonize, {h, Container} from '../';
 import xs from 'xstream';
 
 const doubleNested = Container({
