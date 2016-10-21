@@ -1,9 +1,23 @@
 import xs from 'xstream';
-import {Container, VNode} from './Container';
-declare function require(path: string) : any;
+import {Container} from './Container';
+export {default as Container} from './Container';
 
+declare function require(path: string) : any;
 const snabbdom = require('snabbdom');
-export const h = require('snabbdom/h') as (...args: any[]) => VNode;
+export const h = require('snabbdom/h') as (
+    selector: string,
+    dataOrChildrenOrText?: any,
+    childrenOrText?: any
+) => VNode;
+
+export interface VNode {
+    sel: string,
+    data: any,
+    children: VNode[],
+    text: string,
+    elm: Element,
+    key: string | number
+}
 
 const patch = snabbdom.init([
     require('snabbdom/modules/class'),
@@ -19,7 +33,7 @@ export default function harmonize(
     let node = document.querySelector(selector) as VNode | Element;
     container.view$.addListener({
         next: (newNode) => {
-            patch(node, newNode);
+            patch(node as any, newNode);
             node = newNode;
         },
         error: (error) => console.error(error),

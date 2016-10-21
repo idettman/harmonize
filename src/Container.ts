@@ -1,14 +1,6 @@
 import xs, {MemoryStream} from 'xstream';
 import {Record, Map} from 'immutable';
-
-export interface VNode {
-    sel: string,
-    data: any,
-    children: VNode[],
-    text: string,
-    elm: Element,
-    key: string | number
-}
+import {VNode} from './';
 
 /**
  * Updaters are functions that take in a model and return a new model

@@ -21,11 +21,11 @@ Harmony is most comparable to the react ecosystem because the react ecosystem of
 
 The world of web development is moving at a too rapid pace for really anyone to keep up so I apologize in advance if any of this sounds silly/pointless.
 
-A library is simply a set of prebuilt tools and functions to help you acomplish *something*. Libraries give you new tools to use but don't necessarily tell you how to use it. Frameworks, on the other hand, are tailored to solve a certain problem. Frameworks offer new tools as well as an opinionated way to use them in order to solve that said problem.
+A library is simply a set of prebuilt tools and functions to help you acomplish *something*. Libraries give you new tools to use but don't necessarily tell you how to use it. Frameworks, on the other hand, are tailored to solve a certain problem. Frameworks offer new tools as well as an opinionated ways to use them in order to solve that said problem.
 
-The React 'Ecosystem' is a bit of a different situation because react itself is said to be library because it doesn't offer tell you how to build an application, it only gives you a vDOM. The interesting thing is that other tools have been developed around React to compliment it's meta. Altogether this creates the 'React ecosystem'--a community built 'framework' that's not necessarily packaged up together.
+The React 'Ecosystem' is a bit of a different situation because react itself is said to be just a library because it doesn't tell you how to build an application, it only gives you a vDOM. The interesting thing is that other tools have been developed around React to compliment its meta. Altogether this creates the 'React ecosystem'--a community built 'framework' that's not necessarily packaged up together.
 
-Again, Harmony is a *framework* meaning it will tell you *how* to do everything. The best tools don't leave choices/opinions to you because you'll make a bad choice :)
+Again, Harmony is a *framework* meaning it will tell you *how* to do everything.
 
 ## Prior Art: Why Harmony?
 
@@ -35,11 +35,15 @@ I'd like to remind everyone of their [favorite xkcd comic](http://xkcd.com/927/)
 
 I really don't have any negative things to say about this, I just think it's funny (and correct!).
 
-Admittingly, I would consider myself to be at least somewhat of a [magpie developer](https://blog.codinghorror.com/the-magpie-developer/) but my reason for finding the next 'new and shiny' isn't simply because it's new and shiny--it's because the current state-of-the-art doesn't solve all the problems (and now I've offically learned nothing from the comic above lol).
+Admittingly, I would consider myself to be at least somewhat of a [magpie developer](https://blog.codinghorror.com/the-magpie-developer/) but my reason for finding the next 'new and shiny' isn't simply because it's new and shiny--it's because the current state-of-the-art doesn't solve all the problems (and now I'm the person in that comic :sweat:).
 
-**To truly understand why I'm going through with this insantiy of making another of the seemingly endless frontend frameworks, you'll have to understand the prior art.**
+**To truly understand why I'm attempting to make another of the seemingly endless frontend frameworks, you'll have to understand the prior art.**
 
-### (Too complex) Two-way Data Binding: Backbone, Angular, Ember
+The following section will discuss the 'evolution' of recent application development. We'll discuss the pros and cons of certain methodologies and maybe, just maybe, we can make something better.
+
+### Two-way Data Binding: Backbone, Angular, Ember, Vue etc...
+
+Two-way data binding is a method for automatically transmit
 
 ### Unidirectional Data Flow: React and Cycle.js
 
@@ -54,8 +58,6 @@ Admittingly, I would consider myself to be at least somewhat of a [magpie develo
 * small teams, hackathon ready, minimal but powerful api, no classes, no this
 
 ### Functional First: Don't Mutate State
-
-My friend and I were doing some paired programming and we made this joke to never let each other mutate state.
 
 ### 
 
