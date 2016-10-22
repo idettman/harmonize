@@ -1,2 +1,2 @@
 export {default, h, VNode} from './src/harmonize';
-export {default as Container} from './src/Container';
+export {default as container, Container} from './src/container';

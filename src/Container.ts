@@ -88,7 +88,7 @@ export interface Container<Model> {
     sendUpdate: (updater: Updater<ContainerModel<Model>>) => void
 }
 
-export default function Container<Model> (
+export default function container<Model> (
     container: {
         initialState: Model,
         update?: ExternalUpdater<any, any>[],

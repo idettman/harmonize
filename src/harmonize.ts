@@ -1,4 +1,4 @@
-import {Container} from './Container';
+import {Container} from './container';
 
 declare function require(path: string) : any;
 const snabbdom = require('snabbdom');

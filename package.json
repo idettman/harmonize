@@ -12,7 +12,7 @@
   "devDependencies": {
     "source-map-loader": "^0.1.5",
     "ts-loader": "^0.8.2",
-    "typescript": "^2.0.3",
+    "typescript": "^2.0.6",
     "webpack": "^1.13.2",
     "webpack-dev-server": "^1.15.1"
   },
