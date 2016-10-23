@@ -29,6 +29,10 @@ export interface ContainerViewOptions<Model> {
     modules?: any
 }
 
+export interface View<Model> {
+    (model: Model): VNode
+}
+
 export interface ContainerView<Model> {
     (options: ContainerViewOptions<Model>): VNode
 }
