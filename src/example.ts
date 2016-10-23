@@ -1,6 +1,7 @@
 import harmonize, {h, container} from '../';
 import router from './router';
 import xs from 'xstream';
+import index from './routes';
 
 const doubleNested = container({
     initialState: false,
@@ -74,76 +75,6 @@ const myContainer = container({
     ])
 });
 
-const home0 = container({
-    initialState: 'home 0',
-    view: ({model: title}) => h('div', [title])
-});
 
-const home1 = container({
-    initialState: 'home 1',
-    view: ({model: title}) => h('div', [title])
-});
 
-const home = router({
-    route: 'home',
-    pages: [{
-        name: 'home0',
-        displayName: 'Home 0',
-        container: home0
-    }, {
-        name: 'home1',
-        displayName: 'Home 1',
-        container: home1
-    }],
-    view: ({anchors, currentPage}) => h('div', [
-        h('h1', ['Home page']),
-        h('div', anchors),
-        h('div', [
-            currentPage()
-        ])
-    ])
-});
-
-const about = container({
-    initialState: 'about page',
-    view: ({model: title}) => h('h1', [title])
-});
-
-const main = router({
-    route: '',
-    pages: [{
-        name: 'myContainer',
-        displayName: 'My Container',
-        container: myContainer
-    }, {
-        name: 'second',
-        displayName: 'Second',
-        container: nestedContainer
-    }, {
-        name: 'home',
-        displayName: 'Home',
-        container: home
-    }, {
-        name: 'about',
-        displayName: 'About',
-        container: about
-    }],
-    view: ({
-        anchors: [myContainerLink, nestedLink, home, about],
-        //forward
-        currentPage
-    }) => {
-        return h('div', [
-            h('h1', ['router links: ']),
-            /*
-            h('div', {on: {click: forward}})
-            */
-            h('span', [myContainerLink, nestedLink, home, about]),
-            h('div', [
-                currentPage()
-            ])
-        ]);
-    }
-});
-
-harmonize(main, '#example');
+harmonize(index, '#example');
