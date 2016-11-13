@@ -47,15 +47,15 @@ const home: Route = ({
 const about = container({
     initialState: 'this is the about page',
     view: ({model: title}) => h('h1', [title])
-})
+});
 
 export default router({
+    routes: {home, about},
     view: ({
         anchorList,
         currentPage
     }) => h('div', [
         h('ul', anchorList.map(a => h('li', [a]))),
         currentPage()
-    ]),
-    routes: {home, about}
+    ])
 });
