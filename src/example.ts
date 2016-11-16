@@ -43,7 +43,7 @@ const nestedContainer = container({
 const myContainer = container({
     //nestedContainers: {nestedContainer},
     initialState: {name: 'World', elapsedTime: 0},
-    update: [{
+    update: () => [{
         from: xs.periodic(1000),
         by: (model, time) => Object.assign({}, model, {elapsedTime: model.elapsedTime + 1})
     }],

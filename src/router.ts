@@ -2,6 +2,7 @@ import container, {Container, InternalUpdater} from './container';
 import {h, VNode} from './harmonize';
 import {Record, Map} from 'immutable';
 import fromEvent from 'xstream/extra/fromEvent';
+import xs from 'xstream';
 
 export interface Page<Model> {
     name: string,
@@ -40,6 +41,7 @@ interface Leaf {
 interface Branch {
     view: RouterView,
     path: string,
+    title: string,
     routes: {[key: string]: Leaf | Branch},
 }
 
@@ -73,11 +75,12 @@ export default ({routes, view}: {
         }
 
         if ((route as Route).routes) {
-            const {view, routes, path: unresolvedPath} = route as Route;
+            const {view, routes, path: unresolvedPath, title} = route as Route;
             const path = unresolvedPath || toDashed(key);
             const branch: Branch = {
                 view,
                 path,
+                title: title || toTitle(path),
                 routes: (Object
                     .keys(routes)
                     .map(key => ({
@@ -103,6 +106,7 @@ export default ({routes, view}: {
     const thisBranch: Branch = {
         view,
         path: rootPath,
+        title: toTitle(rootPath),
         routes: (Object
             .keys(routes)
             .map(key => ({key, resolvedRoute: resolve(key, routes[key])}))
@@ -162,9 +166,16 @@ export default ({routes, view}: {
 
     const routerContainer = container ({
         nestedContainers,
-        initialState: [] as string[],
+        initialState: window.location.pathname.split(`/`).slice(1),
+        update: ({undo, redo}) => [{
+            from: fromEvent(window, `popstate`),
+            byInternal: (path) => {
+                console.log(`updating from popstate event`);
+                return undo.byInternal(path);
+            }
+        }],
         view: ({model: path, containers, props, update}) => {
-
+            console.log(`path`, path);
             let placeHolder: any;
 
             function resolveView (
@@ -172,22 +183,18 @@ export default ({routes, view}: {
                 path: string[],
                 key: string
             ): (props?: any) => VNode {
-                console.log (`path`, path);
-                if ((route as Leaf).container) {
-                    console.log(`leaf`, containers[key]);
-                    console.log(`containers`, containers);
-                    return containers[`/${key}`];
+                if (containers[key]) {
+                    return containers[key];
                 }
 
                 const branch = route as Branch;
-                console.log(`branch`, branch);
                 const firstRoute = branch.routes[Object.keys(branch.routes)[0]];
+                const nextRoute = branch.routes[path[0]] || firstRoute;
+
                 const currentPage = resolveView (
-                    branch.routes[path[0]] || firstRoute,
+                    nextRoute,
                     path.slice(1),
-                    /*if*/ key ? `${key}/${
-                        /*if*/ path[0] ? path[0] : firstRoute.path
-                    }` : firstRoute.path
+                    `${key}/${nextRoute.path}`
                 );
 
                 const anchors = (Object
@@ -197,19 +204,15 @@ export default ({routes, view}: {
                         route: branch.routes[branchKey]
                     }))
                     .map(({branchKey, route}) => ({
-                        href: key ? `${key}/${branchKey}`: branchKey,
+                        href: `${key}/${branchKey}`,
                         title: (route as Leaf).title || route.path
                     }))
                     .map(({href, title}) => h('a', {
                         props: {href},
                         on: {click: update({
                             by: (model, event) => {
-                                console.log(`clicked`, event);
                                 event.preventDefault();
-                                console.log(`currentModel`, model);
-                                console.log(`href`, href);
-                                console.log(`new model`, href.split(`/`));
-                                return href.split(`/`);
+                                return href.split(`/`).slice(1);
                             }
                         })}
                     }, [title]))
@@ -225,17 +228,18 @@ export default ({routes, view}: {
             }
 
             const resolvedView = resolveView(thisBranch, path, ``);
-            console.log(`resolvedView`, resolvedView());
+
+            history.replaceState([...path], ``, [...path].join(`/`));
 
             return resolvedView(props);
         }
     });
 
-    routerContainer.state$.addListener({
-        next: path => history.pushState(0, ``, path.join(`/`)),
-        error: error => console.log(error),
-        complete: () => console.log(`complete`)
-    });
+    // routerContainer.state$.addListener({
+    //     next: path => history.pushState([...path], ``, [...path].join(`/`)),
+    //     error: error => console.log(error),
+    //     complete: () => console.log(`complete`)
+    // });
 
     return routerContainer;
 }

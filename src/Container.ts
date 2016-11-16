@@ -9,7 +9,11 @@ export interface Updater<Model> {(model: Model): Model}
 
 export interface ExternalUpdater<Model, Value> {
     from: xs<Model>,
-    by: (model: Model, value?: Value) => Model
+    by?: (model: Model, value?: Value) => Model,
+    byInternal?: (
+        internalModel: ContainerModel<Model>,
+        value?: Value
+    ) => ContainerModel<Model>
 }
 
 export interface InternalUpdater<Model, Value> {
@@ -95,13 +99,13 @@ export interface Container<Model> {
 export default function container<Model> (
     container: {
         initialState: Model,
-        update?: ExternalUpdater<any, any>[],
+        update?: (modules?: any) => ExternalUpdater<any, any>[],
         nestedContainers?: {[containerKey: string]: Container<any>},
         view: ContainerView<Model>
     }
 ): Container<Model> {
     const {initialState, nestedContainers, view} = container;
-    const update = container.update || [];
+    const update = container.update || ((modules?: any) => []);
 
     const nestedContainerList = (Object
         .keys(nestedContainers || {})
@@ -125,34 +129,107 @@ export default function container<Model> (
         xs<(containerModel: ContainerModel<Model>) => ContainerModel<Model>>
     ) = xs.never();
 
-    const externalUpdates$ = update.map(
-        ({from: externalStream$, by: update}) => (
+    const undo: InternalUpdater<any, any> = {
+        map: event => event,
+        byInternal: (model) => {
+            const previousStates = model.getIn(['undoRedoModel', 'previousStates']);
+            if (previousStates.length === 0) return model;
+            return (model
+                .updateIn(
+                    ['undoRedoModel', 'nextStates'],
+                    nextStates => [
+                        ...nextStates,
+                        model.getIn(['undoRedoModel','current'])
+                    ]
+                )
+                .setIn(
+                    ['undoRedoModel', 'current'],
+                    previousStates[previousStates.length - 1]
+                )
+                .updateIn(
+                    ['undoRedoModel', 'previousStates'],
+                    previousStates => previousStates.slice(
+                        0,
+                        previousStates.length - 1
+                    )
+                )
+            )
+        }
+    }
+
+    const redo: InternalUpdater<any, any> = {
+        map: event => event,
+        byInternal: (model) => {
+            const nextStates = model.getIn(['undoRedoModel', 'nextStates']);
+            if (nextStates.length === 0) return model;
+            return (model
+                .updateIn(
+                    ['undoRedoModel', 'previousStates'],
+                    previousStates => [
+                        ...previousStates,
+                        model.getIn(['undoRedoModel','current'])
+                    ]
+                )
+                .setIn(
+                    ['undoRedoModel', 'current'],
+                    nextStates[nextStates.length - 1]
+                )
+                .updateIn(
+                    ['undoRedoModel', 'nextStates'],
+                    nextStates => nextStates.slice(
+                        0,
+                        nextStates.length - 1
+                    )
+                )
+            )
+        }
+    }
+
+    const modules = { undo, redo };
+
+    const externalUpdates$ = update(modules).map(
+        ({from: externalStream$, by: updateModel, byInternal: updateContainerModel}) => {
+
+            if (updateModel && updateContainerModel) throw `that won't work`
             // map the external stream to a function
             // that updates this container Model
-            externalStream$.map(
-                streamValue => (
-                    (containerModel: ContainerModel<Model>) => (
-                        (containerModel
-                            .updateIn(
-                                ['undoRedoModel', 'previousStates'],
-                                previousStates => [
-                                    ...previousStates,
-                                    containerModel.getIn(['undoRedoModel', 'current'])
-                                ]
-                            )
-                            .setIn(
-                                ['undoRedoModel', 'nextStates'],
-                                []
-                            )
-                            .updateIn(
-                                ['undoRedoModel', 'current'],
-                                model => update(model, streamValue)
+            if (updateModel) {
+                return externalStream$.map(
+                    (streamValue: any) => (
+                        (containerModel: ContainerModel<Model>) => (
+                            (containerModel
+                                .updateIn(
+                                    ['undoRedoModel', 'previousStates'],
+                                    previousStates => [
+                                        ...previousStates,
+                                        containerModel.getIn(['undoRedoModel', 'current'])
+                                    ]
+                                )
+                                .setIn(
+                                    ['undoRedoModel', 'nextStates'],
+                                    []
+                                )
+                                .updateIn(
+                                    ['undoRedoModel', 'current'],
+                                    model => updateModel(model, streamValue)
+                                )
                             )
                         )
                     )
                 )
+            }
+            
+            return externalStream$.map(
+                (streamValue: any) => (
+                    (containerModel: ContainerModel<Model>) => (
+                        containerModel.update(self => updateContainerModel(
+                            self,
+                            streamValue
+                        ))
+                    )
+                )
             )
-        )
+        }
     );
 
     /**
@@ -270,64 +347,6 @@ export default function container<Model> (
                 )
             );
         };
-
-        const undo: InternalUpdater<any, any> = {
-            map: event => event,
-            byInternal: (model) => {
-                const previousStates = model.getIn(['undoRedoModel', 'previousStates']);
-                if (previousStates.length === 0) return model;
-                return (model
-                    .updateIn(
-                        ['undoRedoModel', 'nextStates'],
-                        nextStates => [
-                            ...nextStates,
-                            model.getIn(['undoRedoModel','current'])
-                        ]
-                    )
-                    .setIn(
-                        ['undoRedoModel', 'current'],
-                        previousStates[previousStates.length - 1]
-                    )
-                    .updateIn(
-                        ['undoRedoModel', 'previousStates'],
-                        previousStates => previousStates.slice(
-                            0,
-                            previousStates.length - 1
-                        )
-                    )
-                )
-            }
-        }
-
-        const redo: InternalUpdater<any, any> = {
-            map: event => event,
-            byInternal: (model) => {
-                const nextStates = model.getIn(['undoRedoModel', 'nextStates']);
-                if (nextStates.length === 0) return model;
-                return (model
-                    .updateIn(
-                        ['undoRedoModel', 'previousStates'],
-                        previousStates => [
-                            ...previousStates,
-                            model.getIn(['undoRedoModel','current'])
-                        ]
-                    )
-                    .setIn(
-                        ['undoRedoModel', 'current'],
-                        nextStates[nextStates.length - 1]
-                    )
-                    .updateIn(
-                        ['undoRedoModel', 'nextStates'],
-                        nextStates => nextStates.slice(
-                            0,
-                            nextStates.length - 1
-                        )
-                    )
-                )
-            }
-        }
-
-        const modules = { undo, redo };
 
         const view = containerModel.get('view');
         return view({model, containers, update, props, modules});
