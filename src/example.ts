@@ -58,7 +58,7 @@ const myContainer = container({
             h('input', {
                 on: {input: update({
                     map: (event) => (event.target as HTMLInputElement).value,
-                    by: (model, newName) => Object.assign({}, model, {name: newName})
+                    by: (model, newName) => Object.assign({}, model, {name: newName}) 
                 })},
                 props: {value: name}
             })
@@ -74,6 +74,15 @@ const myContainer = container({
         ])
     ])
 });
+
+/*
+container ({
+    initialModel: new Map ({name: `World`, elapsedTime: 0}),
+    
+});
+
+
+ */
 
 
 
