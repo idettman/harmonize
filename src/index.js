@@ -19,7 +19,10 @@ export default function harmonize({model, component, selector}) {
         model,
         sendNext,
         update: updaterOptions => {
-            const update = /*if*/ typeof updaterOptions === 'function' ? updaterOptions : updaterOptions.by;
+            const update = (/*if*/ typeof updaterOptions === 'function'
+                ? updaterOptions
+                : updaterOptions.by
+            );
             const map = updaterOptions.map || (x => x);
             return event => sendNext(
                 state => update(state, /*with*/ map(event))

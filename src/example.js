@@ -5,10 +5,9 @@ const {random} = Math;
 const toValue = event => event.target.value;
 
 const todo = component({
-    view: ({model, update, remove}) => {
-        console.log(model.toJS());
+    view: ({model: todo, update, remove}) => {
 
-        return h('li', (/*if*/ model.editing
+        return h('li', (/*if*/ todo.editing
             ? ([
                 h('form', {
                     on: {submit: update({
@@ -20,7 +19,7 @@ const todo = component({
                     })}
                 }, [
                     h('input.todo-name-field', {
-                        props: {type: 'text', value: model.name},
+                        props: {type: 'text', value: todo.name},
                         hook: {insert: vnode => vnode.elm.focus()}
                     }),
                     h('input', {
@@ -36,9 +35,9 @@ const todo = component({
                 h('div', [
                     h('span', {
                         on: {click: update(todo => todo.set('editing', true))}
-                    }, [model.name]),
+                    }, [todo.name]),
                     h('input', {
-                        props: {type: 'checkbox', checked: model.checked},
+                        props: {type: 'checkbox', checked: todo.checked},
                         on: {click: update(todo => todo.update('checked', checked => !checked))}
                     })
                 ])
@@ -63,7 +62,6 @@ const todoList = component({
         remove: (source, id) => source.deleteIn(['todos', id])
     }},
     view: ({model, update, components: {todo}}) => {
-        window.model = model;
         return h('div', [
             h('form', {
                 on: {submit: update({
@@ -90,7 +88,7 @@ const todoList = component({
             h('hr'),
             h('ul', model.todos.valueSeq().toArray().map(todo))
         ])
-}
+    }
 });
 
 const TodoList = Record({todos: OrderedMap()})
