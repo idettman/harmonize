@@ -1,30 +1,32 @@
-var path = require('path');
-var webpack = require('webpack');
 module.exports = {
-    entry: [
-        'core-js/fn/object/assign',
-        './src/example.ts'
-    ],
+    entry: "./src/example.js",
     output: {
-        filename: './example.js',
+        filename: "./example.js",
     },
 
     // Enable sourcemaps for debugging webpack's output.
-    devtool: 'source-map',
+    devtool: "source-map",
 
     resolve: {
         // Add '.ts' and '.tsx' as resolvable extensions.
-        extensions: ['', '.webpack.js', '.web.js', '.ts', '.js']
+        extensions: ["", ".webpack.js", ".web.js", ".js"]
     },
 
     module: {
         loaders: [
-            // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
-            { test: /\.ts?$/, loader: 'ts-loader' },
+            {
+                test: /\.js$/,
+                exclude: /(node_modules|bower_components)/,
+                loader: 'babel-loader',
+                query: {
+                    presets: ['es2015']
+                }
+            }
         ],
 
         preLoaders: [
-            { test: /\.js$/, loader: 'source-map-loader' }
+            // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
+            { test: /\.js$/, loader: "source-map-loader" }
         ]
     }
 };

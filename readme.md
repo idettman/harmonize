@@ -125,3 +125,13 @@ const container = Container({
 
 harmonize(container, '#example');
 ```
+
+# terminology
+
+* **model** an object that represents the data inside the application
+* **state** a snapshot of a model in time
+
+# misc pros of framework
+
+* (unlike cycle,) you don't have to selector the element to get an event stream
+* (unlike reduce,) you don't have to dispatch an action and a payload, you directly change the model (no indirection)
