@@ -5,7 +5,9 @@ export default function component({
     return ({sendNext, model, update, remove}) => view({
         model,
         update,
-        remove,
+        remove = () => {
+            throw `no delete action defined for this component`
+        },
         components: (Object
             .keys(components)
             .map(key => ({key, componentOptions: components[key]}))
