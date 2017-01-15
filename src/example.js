@@ -6,7 +6,6 @@ const toValue = event => event.target.value;
 
 const todo = component({
     view: ({model: todo, update, remove}) => {
-
         return h('li', (/*if*/ todo.editing
             ? ([
                 h('form', {
@@ -57,7 +56,6 @@ const todoList = component({
     components: {todo: {
         component: todo,
         id: todo => todo.id,
-        get: (source, id) => source.get('todos').get(id),
         update: (source, model, id) => source.setIn(['todos', id], model),
         remove: (source, id) => source.deleteIn(['todos', id])
     }},

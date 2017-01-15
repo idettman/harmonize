@@ -15,7 +15,6 @@ export default function component({
             componentOptions: {
                 component: nestedComponent,
                 id = () => undefined,
-                get: getFrom,
                 update: updateSource,
                 remove: removeFrom = () => {
                     throw `no remove action defined for this component`
@@ -24,7 +23,13 @@ export default function component({
         }) => ({
             key,
             resolvedComponent: (componentModel) => nestedComponent({
-                sendNext,
+                sendNext: update => {
+                    sendNext(source => updateSource(
+                        source,
+                        update(componentModel),
+                        id(componentModel)
+                    ));
+                },
                 model: componentModel,
                 update: updaterOptions => {
                     const nestedUpdate = (/*if*/ typeof updaterOptions === 'function'
@@ -35,8 +40,7 @@ export default function component({
 
                     return event => sendNext(
                         source => {
-                            const nestedModel = getFrom(source, id(componentModel));
-                            const newNestedModel = nestedUpdate(nestedModel, /*with*/ map(event));
+                            const newNestedModel = nestedUpdate(componentModel, /*with*/ map(event));
                             const newSource = updateSource(source, newNestedModel, id(componentModel));
                             return newSource;
                         }

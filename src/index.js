@@ -17,7 +17,9 @@ export default function harmonize({model, component, selector}) {
 
     const view$ = state$.map(model => component({
         model,
-        sendNext,
+        sendNext: updater => {
+            sendNext(source => updater(source));
+        },
         update: updaterOptions => {
             const update = (/*if*/ typeof updaterOptions === 'function'
                 ? updaterOptions
