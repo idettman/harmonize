@@ -1,5 +1,6 @@
 import harmonize, {h} from './';
 import component from './component';
+import history from './history';
 import {fromJS, Record, OrderedMap} from 'immutable';
 const {random} = Math;
 const toValue = event => event.target.value;
@@ -60,7 +61,14 @@ const todoList = component({
         remove: (source, id) => source.deleteIn(['todos', id])
     }},
     view: ({model, update, components: {todo}}) => {
+        console.log('render');
         return h('div', [
+            h('button', {
+                on: {click: update(model => model.undo())}
+            }, ['Undo']),
+            h('button', {
+                on: {click: update(model => model.redo())}
+            }, ['Redo']),
             h('form', {
                 on: {submit: update({
                     map: event => {
@@ -92,7 +100,7 @@ const todoList = component({
 const TodoList = Record({todos: OrderedMap()})
 
 harmonize({
-    model: new TodoList(),
+    model: history(new TodoList()),
     component: todoList,
     selector: '#example'
 });
