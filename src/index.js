@@ -1,8 +1,9 @@
 import xs from 'xstream';
 const snabbdom = require('snabbdom');
 export const h = require('snabbdom/h');
+import {Map} from 'immutable';
 
-export default function harmonize({model, component, selector}) {
+export default function harmonize({component, selector}) {
     const patch = snabbdom.init([
         require('snabbdom/modules/class'),
         require('snabbdom/modules/props'),
@@ -13,7 +14,7 @@ export default function harmonize({model, component, selector}) {
     const event$ = xs.never();
     const sendNext = event$.shamefullySendNext.bind(event$);
 
-    const state$ = event$.fold((state, update) => update(state), model);
+    const state$ = event$.fold((state, update) => update(state), Map());
 
     const view$ = state$.map(model => component({
         model,

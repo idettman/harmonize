@@ -1,5 +1,5 @@
 /**
- * very simple history wrapper for immutable js objects
+ * a very simple history wrapper for immutable js objects
  */
 export default function history(model) {
     let undos = [];
@@ -13,7 +13,6 @@ export default function history(model) {
         const wrappedMethods = methodsToWrap.map(methodName => ({
             methodName,
             method: function () {
-                console.log('wrapper')
                 const lastTodo = undos[undos.length - 1];
                 if (lastTodo !== model) {
                     undos.push(model);
@@ -33,8 +32,7 @@ export default function history(model) {
         function undo() {
             if (undos.length) {
                 redos.push(model);
-                const lastModel = undos.pop();
-                return lastModel;
+                return undos.pop();
             }
             return model;
         }
@@ -42,13 +40,15 @@ export default function history(model) {
         function redo() {
             if (redos.length) {
                 undos.push(model);
-                const lastModel = redos.pop();
-                return lastModel;
+                return redos.pop();
             }
             return model;
         }
 
-        return Object.assign(model, wrappedMethods, {undo, redo});
+        function hasUndo() {return undos.length > 0;}
+        function hasRedo() {return redos.length > 0;}
+
+        return Object.assign(model, wrappedMethods, {undo, redo, hasUndo, hasRedo});
     }
 
     return wrap(model);
