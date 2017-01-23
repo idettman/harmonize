@@ -7,7 +7,7 @@ If you're familiar with React and Redux, the goal of this framework is follow a 
 
 That is:
 
-In Redux, you dispatch `string`s that represent actions
+**In Redux, you dispatch `string`s that represent actions**
 
 ```jsx
 const store = createStore(counter)
@@ -41,8 +41,36 @@ export default (state = 0, action) => {
 }
 ```
 
-This introduces A LOT of indirection! Why can't you just map the event to a function that will change the state?
+This introduces A LOT of indirection!
 
-That's what this framework aims to do--have the same benefits by using the same unidirectional data-flow but remove all the indirection. The goal is to create a very *simple* and very *usable* api.
+**In Harmony, you "dispatch" `functions` that directly update the state.**
+
+(And in the case where you want to dispatch an action more than once, just save the function into a variable)
+
+```js
+const counter = component({
+    view: ({model: count, update, h}) => {
+        return h('div', {
+            ch: [h('button', {
+                on: {click: count => count - 1},
+                ch: '-'
+            }),
+            h('h1', {ch: count}),
+            h('button', {
+                on: {click: count => count + 1},
+                ch: '+'
+            })]
+        })
+    }
+})
+
+harmonize({
+    model: 0,
+    component: counter,
+    selector: '#example'
+});
+```
+
+That's what this framework aims to do--have the same benefits by using the same unidirectional data-flow but remove all the indirection.
 
 This framework is only in it's conceptual stages. Check back soon.
