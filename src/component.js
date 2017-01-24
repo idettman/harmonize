@@ -1,14 +1,12 @@
-import {assignKeys} from './util';
 import {OrderedMap} from 'immutable';
 const hVNode = require('snabbdom/h');
 
 export default function component({
-    model: _initialModel,
+    model: initialModel,
     components = {},
     view
 }) {
     const componentKeys = Object.keys(components);
-    const initialModel = _initialModel && assignKeys(_initialModel);
 
     let sentInitial = false;
 
@@ -27,7 +25,7 @@ export default function component({
         
         function h (selector, selectorOptions) {
             const {
-                mo: modelKey,
+                mo: _modelKey,
                 pr: nestedProps,
                 ch: _nestedChildren,
                 on,
@@ -36,6 +34,8 @@ export default function component({
                 cl,
                 at: attrs
             } = selectorOptions || {};
+
+            const modelKey = _modelKey + '';
 
             const nestedChildren = (/*if*/ _nestedChildren !== undefined
                 ? (/*if*/ typeof _nestedChildren === 'string' || Array.isArray(_nestedChildren)
@@ -60,15 +60,13 @@ export default function component({
                     )
                 );
 
-                const localPath = /*if*/ modelKey ? [...keyPath, (modelKey + '')] : keyPath;
+                const localPath = /*if*/ modelKey ? [...keyPath, modelKey] : keyPath;
                 const fullPath = [...componentPath, ...localPath];
 
                 const nestedModel = (/*if*/ model.hasIn(localPath)
                     ? model.getIn(localPath)
                     : OrderedMap()
                 );
-
-                assignKeys(nestedModel);
 
                 const nestedUpdate = function (updaterOptions) {
                     const updater = (/*if*/ typeof updaterOptions === 'function'

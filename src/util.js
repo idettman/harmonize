@@ -21,18 +21,5 @@ export function hash(str) {
         hash = ((hash << 5) - hash) + chr;
         hash |= 0; // Convert to 32bit integer
     }
-    return hash;
+    return hash + '';
 };
-
-/**
- * Assigns the entries of an immutable map to their keys.
- * This method mutates the object to add the keys.
- */
-export function assignKeys(immut) {
-    return Object.assign(immut, immut.entrySeq().reduce((obj, [key, value]) => {
-        if (immut[key] === undefined) {
-            Object.assign(obj, {get [key] () {return value}});
-        }
-        return obj;
-    }, {}));
-}
