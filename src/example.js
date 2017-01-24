@@ -9,7 +9,6 @@ import 'bulma/css/bulma.css';
 import {hash} from './util';
 
 const question = component({
-    name: 'question',
     view: ({model, props, update, h}) => {
         const responses = [
             [1, 'strongly disagree'],
@@ -23,7 +22,7 @@ const question = component({
             ch: [h('div', {
                 ch: h('strong', {ch: props.question})
             }),
-            h('div', {ch: `model: ${model.get('value')}`}),
+            h('div', {ch: `model: ${model.value}`}),
             h('div', {
                 ch: responses.map(([value, response]) => h('label', {
                     ch: [h('input', {
@@ -32,7 +31,7 @@ const question = component({
                             type: 'radio',
                             name: hash(props.question),
                             value,
-                            checked: model.get('value') === value,
+                            checked: model.value === value,
                         },
                     }), response]
                 }))
@@ -47,7 +46,6 @@ const surveyQuestions = [
 ];
 
 const survey = component({
-    name: 'survey',
     model: OrderedMap(surveyQuestions
         .map(question => ({hash: hash(question) + '', map: Map({value: 3})}))
         .reduce((obj, {hash, map}) => {

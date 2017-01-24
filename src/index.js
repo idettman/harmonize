@@ -12,18 +12,12 @@ export default function harmonize({component, selector}) {
         require('snabbdom/modules/eventlisteners')
     ]);
 
-    const initModel = Object.defineProperty(
-        OrderedMap(), '_isDefaultMap', {value: true}
-    );
-    // assigns all the values of the immutable by key name
-    assignKeys(initModel);
-
     const event$ = xs.never();
     const sendNext = event$.shamefullySendNext.bind(event$);
 
     const state$ = event$.fold(
         (state, update) => update(state),
-        initModel
+        OrderedMap()
     );
 
     const view$ = state$.map(model => component({

@@ -3,7 +3,6 @@ import {OrderedMap} from 'immutable';
 const hVNode = require('snabbdom/h');
 
 export default function component({
-    name,
     model: _initialModel,
     components = {},
     view
@@ -11,28 +10,20 @@ export default function component({
     const componentKeys = Object.keys(components);
     const initialModel = _initialModel && assignKeys(_initialModel);
 
-    console.log(name, initialModel && initialModel.toJS());
+    let sentInitial = false;
 
     return function ({
-        sendNext, componentPath, model: _model, props = {}, update, remove, children = []
+        sendNext, componentPath, model, props = {}, update, remove, children = []
     }) {
-        const model = (/*if*/ _model._isDefaultMap
-            ? initialModel || Object.defineProperty(OrderedMap(), '_isDefaultMap', {value: true})
-            : _model
-        );
 
-        // const imodel = (/*if*/ model._isDefaultMap
-        //     ? initialModel || Object.defineProperty(OrderedMap(), '_isDefaultMap', {value: true})
-        //     : _model
-        // );
-
-        // //console.log(componentPath, model.toJS());
-
-
-        // console.log(componentPath, imodel.toJS());
-        // sendNext(baseModel => {
-        //     return baseModel.setIn(componentPath, imodel);
-        // });
+        if (!sentInitial && initialModel) {
+            window.setTimeout(
+                () => sendNext(baseModel => baseModel.setIn(componentPath, initialModel)),
+                0
+            );
+            sentInitial = true;
+            return hVNode('span', ['loading...']);
+        }
         
         function h (selector, selectorOptions) {
             const {
