@@ -1,9 +1,10 @@
 import xs from 'xstream';
 const snabbdom = require('snabbdom');
 export const h = require('snabbdom/h');
+import {assignKeys} from './util';
 import {OrderedMap} from 'immutable';
 
-export default function harmonize({model: _initModel, component, selector}) {
+export default function harmonize({component, selector}) {
     const patch = snabbdom.init([
         require('snabbdom/modules/class'),
         require('snabbdom/modules/props'),
@@ -11,14 +12,11 @@ export default function harmonize({model: _initModel, component, selector}) {
         require('snabbdom/modules/eventlisteners')
     ]);
 
-    const initModel = _initModel || OrderedMap();
+    const initModel = Object.defineProperty(
+        OrderedMap(), '_isDefaultMap', {value: true}
+    );
     // assigns all the values of the immutable by key name
-    Object.assign(initModel, initModel.entrySeq().reduce((obj, [key, value]) => {
-        if (initModel[key] === undefined) {
-            Object.assign(obj, {get [key] () {return value}});
-        }
-        return obj;
-    }, {}));
+    assignKeys(initModel);
 
     const event$ = xs.never();
     const sendNext = event$.shamefullySendNext.bind(event$);
