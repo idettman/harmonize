@@ -1,5 +1,6 @@
 import {OrderedMap} from 'immutable';
 const hVNode = require('snabbdom/h');
+import {hash} from './util';
 
 export default function component({
     model: initialModel,
@@ -9,6 +10,7 @@ export default function component({
     const componentKeys = Object.keys(components);
 
     let sentInitial = false;
+    let previous = {};
 
     return function ({
         sendNext, componentPath, model, props = {}, update, remove, children = []
@@ -21,6 +23,19 @@ export default function component({
             );
             sentInitial = true;
             return hVNode('span', ['loading...']);
+        }
+
+        // immutable optimization
+        const pathHash = hash(componentPath.join('__'));
+        if (previous[pathHash] === undefined) {
+            previous[pathHash] = {};
+        }
+        
+        if (previous[pathHash].model == model) {
+            console.info('opt used');
+            return previous[pathHash].view;
+        } else {
+            console.log('no opt', model && model.toJS(), previous[pathHash].model && previous[pathHash].model.toJS());
         }
         
         function h (selector, selectorOptions) {
@@ -35,7 +50,7 @@ export default function component({
                 at: attrs
             } = selectorOptions || {};
 
-            const modelKey = _modelKey + '';
+            const modelKey = String(_modelKey);
 
             const nestedChildren = (/*if*/ _nestedChildren !== undefined
                 ? (/*if*/ typeof _nestedChildren === 'string' || Array.isArray(_nestedChildren)
@@ -46,6 +61,7 @@ export default function component({
             );
             
             const componentKey = componentKeys.find(key => selector.startsWith(key));
+            
             if (componentKey) {
                 const componentOptions = components[componentKey];
 
@@ -111,6 +127,7 @@ export default function component({
             }
         }
 
-        return view({model, props, update, remove, h, children});
+        previous[pathHash].model = model;
+        return previous[pathHash].view = view({model, props, update, remove, h, children});
     }
 }
