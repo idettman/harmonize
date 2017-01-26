@@ -1,16 +1,16 @@
 import {OrderedMap} from 'immutable';
-const hVNode = require('snabbdom/h');
-import {hash} from './util';
+import hVNode from 'snabbdom/h';
+import thunk from 'snabbdom/thunk';
 
 export default function component({
     model: initialModel,
     components = {},
     view
 }) {
+    
     const componentKeys = Object.keys(components);
 
     let sentInitial = false;
-    let previous = {};
 
     return function ({
         sendNext, componentPath, model, props = {}, update, remove, children = []
@@ -25,19 +25,6 @@ export default function component({
             return hVNode('span', ['loading...']);
         }
 
-        // immutable optimization
-        const pathHash = hash(componentPath.join('__'));
-        if (previous[pathHash] === undefined) {
-            previous[pathHash] = {};
-        }
-        
-        if (previous[pathHash].model == model) {
-            console.info('opt used');
-            return previous[pathHash].view;
-        } else {
-            console.log('no opt', model && model.toJS(), previous[pathHash].model && previous[pathHash].model.toJS());
-        }
-        
         function h (selector, selectorOptions) {
             const {
                 mo: _modelKey,
@@ -59,8 +46,10 @@ export default function component({
                 )
                 : []
             );
-            
-            const componentKey = componentKeys.find(key => selector.startsWith(key));
+
+            const componentKey = componentKeys.find(key => (
+                selector.trim().toLowerCase().startsWith(key.toLowerCase())
+            ));
             
             if (componentKey) {
                 const componentOptions = components[componentKey];
@@ -127,7 +116,6 @@ export default function component({
             }
         }
 
-        previous[pathHash].model = model;
-        return previous[pathHash].view = view({model, props, update, remove, h, children});
+        return view({model, props, update, remove, h, children});
     }
 }

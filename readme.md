@@ -43,7 +43,7 @@ export default (state = 0, action) => {
 
 This introduces A LOT of indirection!
 
-**In Harmony, you "dispatch" `functions` that directly update the state.**
+**In Harmony, you "dispatch" `function`s that directly update the state.**
 
 (And in the case where you want to dispatch an action more than once, just save the function into a variable)
 

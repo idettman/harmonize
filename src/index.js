@@ -1,16 +1,13 @@
 import xs from 'xstream';
-const snabbdom = require('snabbdom');
-export const h = require('snabbdom/h');
-import {assignKeys} from './util';
+import snabbdom from 'snabbdom';
 import {OrderedMap} from 'immutable';
+import moduleClass from 'snabbdom/modules/class';
+import moduleProps from 'snabbdom/modules/props';
+import moduleStyle  from 'snabbdom/modules/style';
+import moduleEventListeners from 'snabbdom/modules/eventlisteners';
 
 export default function harmonize({component, selector}) {
-    const patch = snabbdom.init([
-        require('snabbdom/modules/class'),
-        require('snabbdom/modules/props'),
-        require('snabbdom/modules/style'),
-        require('snabbdom/modules/eventlisteners')
-    ]);
+    const patch = snabbdom.init([moduleClass, moduleProps, moduleStyle, moduleEventListeners]);
 
     const event$ = xs.never();
     const sendNext = event$.shamefullySendNext.bind(event$);

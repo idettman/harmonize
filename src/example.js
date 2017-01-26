@@ -1,11 +1,11 @@
 import harmonize from './';
 import component from './component';
-import {OrderedMap, Map} from 'immutable';
+import {OrderedMap, Map, fromJS} from 'immutable';
 import 'bulma/css/bulma.css';
 import {hash} from './util';
 
 const question = component({
-    view: ({model, props, update, h}) => {
+    view: ({model, props, update, h, remove}) => {
         const responses = [
             [1, 'strongly disagree'],
             [2, 'disagree'],
@@ -16,7 +16,7 @@ const question = component({
 
         return h('div', {
             ch: [h('div', {
-                ch: h('strong', {ch: props.question})
+                ch: h('strong', {ch: model.get('question')})
             }),
             h('div', {ch: `model: ${model.get('value')}`}),
             h('div', {
@@ -25,12 +25,15 @@ const question = component({
                         on: {click: update(model => model.set('value', value))},
                         pr: {
                             type: 'radio',
-                            name: hash(props.question),
+                            name: hash(model.get('question')),
                             value,
                             checked: model.get('value') === value,
                         },
                     }), response]
                 }))
+            }), h('button', {
+                on: {click: remove()},
+                ch: 'x'
             })]
         });
     }
@@ -42,25 +45,26 @@ const surveyQuestions = [
 ];
 
 const survey = component({
-    model: OrderedMap(surveyQuestions
-        .map(question => ({hash: hash(question) + '', map: Map({value: 3})}))
-        .reduce((obj, {hash, map}) => {
-            obj[hash] = map;
+    model: fromJS(surveyQuestions
+        .map(question => ({hash: hash(question), question}))
+        .reduce((obj, {hash, question}) => {
+            obj[hash] = {question, value: 3};
             return obj;
         }, {})
     ),
     components: {question},
     view: ({model, update, h}) => {
-        const total = (surveyQuestions
-            .map(question => model.get(hash(question)).get('value'))
+        console.log('model', model && model.toJS());
+        const total = (model.valueSeq()
+            .map(model => model.get('value'))
             .reduce((sum, value) => sum + value, 0)
         );
 
         return h('div', {
             ch: [h('h1', {ch: `Total: ${total}`}), h('div', {
-                ch: surveyQuestions.map(question => h('question', {
-                    pr: {question},
-                    mo: hash(question)
+                ch: model.entrySeq().toArray().map(([hash, model]) => h('question', {
+                    pr: {question: 'fewfew'},
+                    mo: hash
                 }))
             })]
         });
