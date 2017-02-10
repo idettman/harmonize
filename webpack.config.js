@@ -1,7 +1,9 @@
 module.exports = {
-    entry: "./src/example.js",
+    entry: "./src/index.js",
     output: {
-        filename: "./example.js",
+        filename: "./bundle.js",
+        library: 'harmony-mv',
+        libraryTarget: 'commonjs2'
     },
 
     // Enable sourcemaps for debugging webpack's output.
@@ -21,8 +23,7 @@ module.exports = {
                 query: {
                     presets: ['es2015']
                 }
-            },
-            { test: /\.css$/, loader: "style-loader!css-loader" }            
+            }
         ],
 
         preLoaders: [

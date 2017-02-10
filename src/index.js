@@ -5,6 +5,11 @@ import moduleClass from 'snabbdom/modules/class';
 import moduleProps from 'snabbdom/modules/props';
 import moduleStyle  from 'snabbdom/modules/style';
 import moduleEventListeners from 'snabbdom/modules/eventlisteners';
+import comp from './component';
+export const component = comp;
+
+import rou from './router';
+export const route = rou;
 
 export default function harmonize({component, selector}) {
     const patch = snabbdom.init([moduleClass, moduleProps, moduleStyle, moduleEventListeners]);
