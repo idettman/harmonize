@@ -1,125 +1,93 @@
 import component from './component';
+import {OrderedMap} from 'immutable';
 
-import {h} from './';
-
-function toTitle(camelCase) {
+function toTitle(camel) {
     // TODO
-    return camelCase;
+    return camel;
 }
 
+export default function route({routes, view}) {
 
-export default function route({
-    routes,
-    view
-}) {
-    console.log('routes', routes);
+    const routeKeys = Object.keys(routes);
 
-    //const components = Object.keys(routes);
-
-    return compxonent({
-        components: routes,
-        view: ({model, update, props, components}) => {
-
-            const route = model.get('route') || Object.keys(components)[0];
-            console.log('route', route);
-            console.log('components', components);
-            const rawCurrentPage = routes[route];
-
-            const current = (
-                (/*if*/ rawCurrentPage.component === undefined
-                    && typeof rawCurrentPage === 'function'
-                )
-                ? ({component: rawCurrentPage, label: route})
-                : rawCurrentPage
+    const resolvedRoutes = (Object
+        .keys(routes)
+        .map(key => ({key, route: routes[key]}))
+        .map(({key, route}) => {
+            const component = /*if*/ typeof route === 'function' ? route : route.component;
+            if (component === undefined) {throw `Route '${key}' was not configured correctly.`}
+            const keyPath = (/*if*/ Array.isArray(route.keyPath)
+                ? route.keyPath
+                : [route.keyPath || key]
             );
+            const label = route.label || toTitle(key);
+            return {key, component, keyPath, label};
+        })
+        .reduce((obj, {key, component, keyPath, label}) => {
+            obj[key] = {component, keyPath, label};
+            return obj;
+        }, {})
+    );
 
-            const subModel = /*if*/ current.get ? current.get(model) : model;
+    return component({
+        model: OrderedMap({route: routeKeys[0]}),
+        components: resolvedRoutes,
+        view: ({model, props, update, remove, h: componentH}) => {
 
-            const componentView = components[route];
+            // const anchorList = (Object
+            //     .keys(resolvedRoutes)
+            //     .map(route => ({route, routeOptions: routes[route]}))
+            //     .map(({route, routeOptions}) => {
+            //         const anchor = h('a', {
+            //             on: {click: update({
+            //                 map: event => {event.preventDefault(); return event;},
+            //                 by: model => model.set('route', route);
+            //             })},
+            //             ch: 
+            //         });
+            //         return {route, anchor};
+            //     })
+            // );
 
-            console.log(typeof componentView);
+            function h (selector, vNodeOptions) {
+                if (selector.startsWith('route')) {
 
-            const currentPage = componentView({
-                model: subModel,
-                props: {routeChain: [...(props && props.routeChain || []), route]}
-            });
+                    vNodeOptions = Object.assign(
+                        vNodeOptions || {},
+                        {pr: {routePath: [...(props.routePath || []), model.get('route')]}}
+                    );
 
-            const anchorList = (Object
-                .keys(components)
-                .map(key => ({key, routeOptions: components[key]}))
-                .map(({key, routeOptions}) => ({
-                    key,
-                    label: /*routeOptions.label || */toTitle(key)
-                }))
-                .map(({label, key}) => ({
-                    key,
-                    anchor: h('a', {
-                        on: {click: update({
-                            // TODO create history.pushState side effect
-                            map: event => {
-                                event.preventDefault();
-                                return event;
-                            },
-                            by: model => model.set('route', key)
-                        })},
-                        props: {href: (props && props.routeChain || []).join('/') + '/' + key}
-                    }, [label])
-                }))
-            );
+                    return componentH(
+                        model.get('route'),
+                        vNodeOptions
+                    );
+                }
 
-            const anchor = anchorList.reduce((obj, {anchor, key}) => {
-                obj[key] = anchor;
-                return obj;
-            }, {});
+                if (selector.startsWith('a-')) {
+                    const routeAnchor = selector.substring('a-'.length);
 
-            const anchors = anchorList.map(({anchor, key}) => anchor);
+                    vNodeOptions = Object.assign(
+                        vNodeOptions || {},
+                        {
+                            on: {click: update({
+                                map: event => {
+                                    event.preventDefault();
+                                    return event;
+                                },
+                                by: model => model.set('route', routeAnchor)
+                            })},
+                            pr: {href: [...(props.routePath || []), routeAnchor].join('/')},
+                            ch: routeAnchor
+                        }
+                    );
 
-            return view({model, anchor, anchors, currentPage});
+                    return componentH('a', vNodeOptions);
+                }
+
+                return componentH(selector, vNodeOptions);
+            }
+
+            return view({model, update, remove, h});
         }
     });
 }
-
-/*
-
-const index = route({
-    label: '',
-    routes: {
-        home, // the component only
-        home: {component: home}, // the component only with an object
-        about: { // with model mapping
-            label: 'About',
-            get: (source) => source.get('id')
-            component: component({}),
-            //id: model => model.get('id'),
-            //update: (source, model) => source.set('key', model),
-            //remove: (source, id) => source.delete(id),
-        },
-        // or a route. a route is just a component so the above applies
-        nestedRoute: route({
-            routes: 
-        }),
-        // including a route with model mapping
-        nestedRoute: {
-            component: route({}),
-            update: (source, model) =>
-        }
-    },
-    view: ({model, anchors, currentPage}) => h('div', [
-        currentPage
-    ])
-});
-
-harmonize({
-    model: fromJS({
-        route,
-        home: {
-            route: ,
-
-        },
-        about,
-    }),
-    component: index,
-    selector: '#example'
-});
-
-*/
