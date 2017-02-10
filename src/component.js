@@ -124,6 +124,6 @@ export default function component({
             }
         }
 
-        return view({model, props, update, remove, h, children});
+        return view({model, props, update, remove, h, children}) || hVNode('span', ['view must return a vnode']);
     }
 }
