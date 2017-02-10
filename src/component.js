@@ -25,7 +25,7 @@ export default function component({
             return hVNode('span', ['loading...']);
         }
 
-        function h (selector, selectorOptions) {
+        function h (selector, vNodeOptions) {
             const {
                 mo: _modelKey,
                 pr: nestedProps,
@@ -35,7 +35,7 @@ export default function component({
                 st: style,
                 cl,
                 at: attrs
-            } = selectorOptions || {};
+            } = vNodeOptions || {};
 
             const modelKey = String(_modelKey);
 
@@ -54,14 +54,22 @@ export default function component({
             if (componentKey) {
                 const componentOptions = components[componentKey];
 
-                const {
-                    component: nestedComponent,
-                    keyPath = []
-                } = (/*if*/ typeof componentOptions === 'function'
-                    ? ({component: componentOptions})
+                const nestedComponent = (/*if*/ typeof componentOptions === 'function'
+                    ? componentOptions
                     : (/*if*/ typeof componentOptions.component === 'function'
-                        ? componentOptions
-                        : (() => {throw `Component '${componentKey}' was configured incorrectly`;})()
+                        ? componentOptions.component
+                        : (() => {throw `Component '${componentKey}' was configured incorrectly`;})
+                    )
+                );
+
+                const keyPath = (/*if*/ typeof componentOptions === 'function'
+                    ? []
+                    : (/*if*/ typeof componentOptions.keyPath === 'string'
+                        ? [componentOptions.keyPath]
+                        : (/*if*/ Array.isArray(componentOptions.keyPath)
+                            ? componentOptions.keyPath
+                            : (() => {throw `Component '${componentKey}'s' keyPath was configured incorrectly`})()
+                        )
                     )
                 );
 
