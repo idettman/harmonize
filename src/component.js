@@ -37,7 +37,7 @@ export default function component({
                 at: attrs
             } = vNodeOptions || {};
 
-            const modelKey = String(_modelKey);
+            const modelKey = _modelKey && String(_modelKey);
 
             const nestedChildren = (/*if*/ _nestedChildren !== undefined
                 ? (/*if*/ typeof _nestedChildren === 'string' || Array.isArray(_nestedChildren)
@@ -124,6 +124,6 @@ export default function component({
             }
         }
 
-        return view({model, props, update, remove, h, children}) || hVNode('span', ['view must return a vnode']);
+        return view({model: model.toJS(), props, update, remove, h, children}) || hVNode('span', ['view must return a vnode']);
     }
 }
